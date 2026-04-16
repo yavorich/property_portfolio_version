@@ -1,17 +1,25 @@
-import asyncio
 import logging
 import re
 from urllib.parse import urlparse
 
 from telegram import Update
 from telegram.constants import ParseMode
+from telegram.error import BadRequest
 from telegram.ext import CallbackContext, CommandHandler, MessageHandler, filters
 
 from apps.account.models import User
+from apps.listings.models import Listing
+from apps.listings.parsers import ParserNotFound
+from apps.listings.services import process_url
 
 logger = logging.getLogger(__name__)
 
-BAYUT_HOSTS = {"bayut.com", "www.bayut.com"}
+SUPPORTED_HOSTS = {
+    "bayut.com",
+    "www.bayut.com",
+    "propertyfinder.ae",
+    "www.propertyfinder.ae",
+}
 URL_RE = re.compile(r"https?://\S+")
 
 WELCOME_TEXT = (
@@ -66,21 +74,38 @@ async def handle_message(update: Update, context: CallbackContext) -> None:
     match = URL_RE.search(message.text)
     if not match:
         await message.reply_text(
-            "Не вижу ссылки в сообщении. Пришлите ссылку на листинг Bayut."
+            "Не вижу ссылки в сообщении. Пришлите ссылку на листинг Bayut или Property Finder."
         )
         return
 
     url = match.group(0)
-    if not _is_bayut_url(url):
-        await message.reply_text("Поддерживаются только ссылки на Bayut.com.")
+    if not _is_supported(url):
+        await message.reply_text("Поддерживаются только ссылки на Bayut и Property Finder.")
         return
 
     status = await message.reply_text("✅ Принято в работу")
+
+    async def on_status(text: str) -> None:
+        try:
+            await status.edit_text(text, parse_mode=ParseMode.HTML)
+        except BadRequest as exc:
+            # Telegram refuses "message is not modified" etc. — safe to ignore.
+            logger.debug("Status edit skipped: %s", exc)
+
     try:
-        await _run_mock_pipeline(url, status, user)
+        listing = await process_url(url, user, on_status)
+    except ParserNotFound:
+        await status.edit_text("Поддерживаются только ссылки на Bayut и Property Finder.")
+        return
+    except NotImplementedError as exc:
+        await status.edit_text(str(exc) or "Парсер для этого источника ещё не готов.")
+        return
     except Exception:
         logger.exception("Pipeline failed for %s", url)
         await status.edit_text("❌ Ошибка при обработке. Попробуйте позже.")
+        return
+
+    await on_status(_format_result(listing, await listing.photos.acount()))
 
 
 async def _authorize(update: Update) -> User | None:
@@ -104,33 +129,43 @@ async def _authorize(update: Update) -> User | None:
     return user
 
 
-def _is_bayut_url(url: str) -> bool:
+def _is_supported(url: str) -> bool:
     try:
         host = (urlparse(url).hostname or "").lower()
     except ValueError:
         return False
-    return host in BAYUT_HOSTS
+    return host in SUPPORTED_HOSTS
 
 
-async def _run_mock_pipeline(url: str, status, user: User) -> None:
-    """Mock pipeline with staged status updates. Real scraping / watermark /
-    presentation modules will replace each sleep block later."""
-
-    await status.edit_text("📥 Скачиваю фото и данные объекта…")
-    await asyncio.sleep(1.5)
-
-    await status.edit_text("🧹 Удаляю водяные знаки…")
-    await asyncio.sleep(1.5)
-
-    await status.edit_text("🧾 Формирую презентацию…")
-    await asyncio.sleep(1.5)
-
-    await status.edit_text(
-        "✅ Готово!\n\n"
-        f"Объект: <i>{url}</i>\n"
-        "Презентация будет прикреплена, когда пайплайн парсинга/обработки "
-        "будет подключён (сейчас — мок)."
-    )
+def _format_result(listing: Listing, photo_count: int) -> str:
+    lines = ["✅ <b>Готово!</b>", ""]
+    if listing.title:
+        lines.append(f"<b>{listing.title}</b>")
+    if listing.address:
+        lines.append(listing.address)
+    if listing.price:
+        lines.append(f"💰 {listing.price:,} {listing.currency}".replace(",", " "))
+    specs = []
+    if listing.rooms is not None:
+        specs.append(f"{listing.rooms} комн.")
+    if listing.bathrooms is not None:
+        specs.append(f"{listing.bathrooms} с/у")
+    if listing.area_sqm:
+        specs.append(f"{listing.area_sqm:g} m²")
+    if listing.floor:
+        specs.append(f"этаж {listing.floor}")
+    if specs:
+        lines.append(" · ".join(specs))
+    if listing.broker_name or listing.broker_phone:
+        broker = listing.broker_name or "брокер"
+        if listing.broker_phone:
+            broker += f" · {listing.broker_phone}"
+        lines.append(f"👤 {broker}")
+    lines.append("")
+    lines.append(f"🖼 Фото скачано: {photo_count}")
+    lines.append("")
+    lines.append("<i>Удаление водяных знаков и формирование презентации — следующий этап.</i>")
+    return "\n".join(lines)
 
 
 start_handlers = [

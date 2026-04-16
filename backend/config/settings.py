@@ -37,6 +37,7 @@ SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
 
 LOCAL_APPS = [
     "apps.account",
+    "apps.listings",
 ]
 
 THIRD_PARTY_APPS = [
