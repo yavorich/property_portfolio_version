@@ -1,0 +1,139 @@
+{% load i18n nested_admin admin_urls %}
+{% with inline_admin_formset.formset.is_nested as is_nested %}
+
+{% with inline_admin_formset.opts as inline_opts %}
+<div class="inline-group group djn-group djn-stacked{% if is_nested %} djn-group-nested{% else %} djn-group-root{% endif %}"
+    id="{{ inline_admin_formset.formset.prefix }}-group"
+    data-inline-type="stacked"
+    data-inline-formset="{{ inline_admin_formset.inline_formset_data }}"
+    data-inline-model="{{ inline_admin_formset.inline_model_id }}"
+    {% if not is_nested %}
+    {% if inline_admin_formset.opts.tab %}x-show="activeTab == '{{ inline_admin_formset.opts.verbose_name|slugify }}'"{% else %}x-show="activeTab == 'general'"{% endif %}
+    {% endif %}
+>
+
+    {% ifinlineclasses %}<fieldset class="djn-fieldset module {{ inline_admin_formset.classes }}" aria-labelledby="{{ inline_admin_formset.formset.prefix }}-heading">{% endifinlineclasses %}
+    {% if inline_admin_formset.is_collapsible %}<details><summary>{% endif %}
+    <h2 id="{{ inline_admin_formset.formset.prefix }}-heading" class="inline-heading bg-base-100 border border-transparent font-semibold mb-6 px-4 py-3 rounded-md text-base-900 text-sm lg:-mx-4 dark:bg-white/[.02] dark:border dark:border-base-800 dark:text-base-200 {% if not is_nested %}{% if inline_admin_formset.opts.tab %}hidden{% endif %}{% endif %} {% if inline_admin_formset.is_collapsible %} cursor-pointer{% endif %}">
+    {% if inline_admin_formset.opts.title %}{{ inline_admin_formset.opts.title }}{% else %}{{ inline_admin_formset.opts.verbose_name_plural|capfirst }}{% endif %}
+    </h2>
+    {% if inline_admin_formset.is_collapsible %}</summary>{% endif %}
+
+    {{ inline_admin_formset.formset.management_form }}
+    {{ inline_admin_formset.formset.non_form_errors }}
+
+    {% if inline_admin_formset.forms|length == 0 and not inline_admin_formset.has_add_permission %}
+        <p class="mb-6 text-sm">
+            {% trans "No records found." %}
+        </p>
+    {% else %}
+    <div class="items djn-items border border-base-200 mb-6 overflow-hidden rounded shadow-sm w-full dark:border-base-800">
+
+        {% with inline_admin_formset.opts.sortable_field_name|default:"" as sortable_field_name %}
+        {% for inline_admin_form in inline_admin_formset|formsetsort:sortable_field_name %}
+            {% if forloop.first %}
+            <div class="djn-item djn-no-drag"><div></div></div>
+            {% endif %}
+            <div class="{% if not forloop.last or not inline_admin_formset.has_add_permission %}djn-item{% endif %} djn-module djn-inline-form inline-related group inline-stacked{% if inline_admin_form.original or inline_admin_form.show_url %} has_original{% endif %}{% if forloop.last and inline_admin_formset.has_add_permission %} djn-empty-form empty-form last-related{% endif %}"
+                 data-inline-model="{{ inline_admin_form.model_admin.opts.app_label }}-{{ inline_admin_form.model_admin.opts.model_name }}"
+                 {% if inline_admin_form.pk_field.field %}
+                 data-is-initial="{% if inline_admin_form.pk_field.field.value %}true{% else %}false{% endif %}"
+                 {% endif %}
+                 id="{{ inline_admin_formset.formset.prefix }}-{% if forloop.last and inline_admin_formset.has_add_permission %}empty{% else %}{{ inline_admin_form.form|form_index }}{% endif %}">
+                 
+                <h3 class="{% if not inline_opts.sortable_options or not inline_opts.sortable_options.disabled %} djn-drag-handler{% endif %} bg-base-50 border-b {% if not forloop.first %}border-t{% endif %} border-base-200 flex font-medium items-center mb-3 px-3 py-2 text-sm dark:bg-white/[.02] dark:border-base-800">
+                    <span class="mr-2">
+                        {{ inline_admin_formset.opts.verbose_name|capfirst }}:
+                    </span>
+                    <span class="inline_label font-semibold text-base-900 dark:text-base-200">
+                        {% if inline_admin_form.original %}{{ inline_admin_form.original }}{% if inline_admin_form.model_admin.show_change_link and inline_admin_form.model_admin.has_registered_model %}
+                        <a href="{% url inline_admin_form.model_admin.opts|admin_urlname:'change' inline_admin_form.original.pk|admin_urlquote %}" class="{% if inline_admin_formset.has_change_permission %}inlinechangelink{% else %}inlineviewlink{% endif %} font-medium text-primary-600 dark:text-primary-500">
+                            {% if inline_admin_formset.has_change_permission %}{% trans "Change" %}{% else %}{% trans "View" %}{% endif %}
+                        </a>
+                        {% endif %}
+                        {% else %}
+                            {% if inline_admin_form.original %}
+                                {% with inline_title=inline_admin_form.original.get_inline_title %}
+                                    {% if inline_title %}
+                                        {{ inline_title }}
+                                    {% else %}
+                                        {{ inline_admin_form.original }}
+                                    {% endif %}
+                                {% endwith %}
+
+                                {% if inline_admin_form.model_admin.show_change_link and inline_admin_form.model_admin.has_registered_model %}
+                                    <a href="{% url inline_admin_form.model_admin.opts|admin_urlname:'change' inline_admin_form.original.pk|admin_urlquote %}" class="{{ inline_admin_formset.has_change_permission|yesno:'inlinechangelink,inlineviewlink' }} font-medium ml-2 text-primary-600 dark:text-primary-500">
+                                        {% if inline_admin_formset.has_change_permission %}
+                                            {% translate "Change" %}
+                                        {% else %}
+                                            {% translate "View" %}
+                                        {% endif %}
+                                    </a>
+                                {% endif %}
+                            {% else %}
+                                #{{ forloop.counter }}
+                            {% endif %}
+                        {% endif %}
+                    </span>
+                        {% if inline_admin_form.show_url %}
+                            <a href="{{ inline_admin_form.absolute_url }}" class="font-medium ml-2 text-primary-600 dark:text-primary-500">
+                                {% trans "View on site" %}
+                            </a>
+                        {% endif %}
+
+                        {% if inline_admin_formset.formset.can_delete  %}
+                            {% if inline_admin_form.original %}
+                                <span class="delete djn-delete-handler {{ inline_admin_formset.handler_classes|join:" " }}">{{ inline_admin_form.deletion_field.field }} {{ inline_admin_form.deletion_field.label_tag }}</span>
+                            {% else %}
+                                <span><a class="inline-deletelink djn-remove-handler {{ inline_admin_formset.handler_classes|join:" " }}" href="javascript:void(0)">{% trans 'Remove' %}</a></span>
+                            {% endif %}
+                        {% endif %}
+                </h3>
+
+                {% include "unfold/helpers/messages/error.html" with errors=inline_admin_form.form.non_field_errors %}
+
+                {% if "5.1"|django_version_gte %}
+                {% with parent_counter=forloop.counter0 %}
+                    {% for fieldset in inline_admin_form %}
+                        <div class="px-3 -mb-5 {% if inline_admin_formset.opts.hide_title %}{% if not inline_admin_formset.formset.can_delete or not inline_admin_formset.has_delete_permission  %}pt-3{% endif %}{% endif %}">
+                            {% include 'admin/includes/fieldset.html' with stacked=1 heading_level=4 id_prefix=parent_counter id_suffix=forloop.counter0 %}
+                        </div>
+                    {% endfor %}
+                {% endwith %}
+                {% else %}
+                {% for fieldset in inline_admin_form %}
+                    <div class="px-3 -mb-5 {% if inline_admin_formset.opts.hide_title %}{% if not inline_admin_formset.formset.can_delete or not inline_admin_formset.has_delete_permission  %}pt-3{% endif %}{% endif %}">
+                        {% include 'admin/includes/fieldset.html' with stacked=1 %}
+                    </div>
+                {% endfor %}
+                {% endif %}
+
+                {% if inline_admin_form.has_auto_field or inline_admin_form.needs_explicit_pk_field %}
+                    {{ inline_admin_form.pk_field.field }}
+                {% endif %}
+
+                {% if inline_admin_form.fk_field %}{{ inline_admin_form.fk_field.field }}{% endif %}
+
+                <div class="mx-2">
+                {% if inline_admin_form.form.inlines %}
+                    {% for nested in inline_admin_form.form.inlines %}
+                        {% include nested.opts.template with inline_admin_formset=nested %}
+                    {% endfor %}
+                {% endif %}
+                </div>
+
+            </div>
+        {% endfor %}
+        {% endwith %}
+    </div>
+    <div class="djn-module djn-add-item add-item add-row">
+        <a href="javascript://" class="add-handler djn-add-handler {{ inline_admin_formset.handler_classes|join:" " }}">
+            {% blocktrans with inline_admin_formset.opts.verbose_name|strip_parent_name:inline_opts.verbose_name|title as verbose_name %}Add another {{ verbose_name }}{% endblocktrans %}
+        </a>
+    </div>
+    {% if inline_admin_formset.is_collapsible %}</details>{% endif %}{% endif %}
+    {% ifinlineclasses %}</fieldset>{% endifinlineclasses %}
+</div>
+{% endwith %}{# ends with inline_admin_formset.opts as inline_opts #}
+
+{% endwith %}{# ends {% with inline_admin_formset.formset.is_nested as is_nested %} #}

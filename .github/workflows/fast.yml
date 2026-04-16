@@ -1,0 +1,52 @@
+name: Fast CI/CD
+
+on:
+  workflow_dispatch:
+    branches:
+      - main-server
+  push:
+    branches:
+      - main-server
+
+jobs:
+  deploy:
+    runs-on: [ self-hosted, main-hosted ]
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 3
+
+      - name: 'Create env file'
+        run: |
+          echo "${{ secrets.MAIN_ENV_FILE }}" > .env
+
+      - name: Build and run
+        run: |
+          docker-compose restart
+
+      - name: Rollback if fail
+        if: failure()
+        run: |
+          git reset --hard HEAD~1
+          docker-compose restart
+
+      - name: Collect static
+        run: docker exec -t curl_backend python manage.py collectstatic --noinput
+
+  database:
+    runs-on: [ self-hosted, main-hosted ]
+    needs: deploy
+    steps:
+      - name: Backup database
+        run: docker exec -t curl_postgres pg_dumpall -c -U postgres > local_dump.sql
+
+      - name: Migrations
+        run: docker exec -t curl_backend python manage.py migrate --no-input
+
+      - name: Rollback git and DB if fail
+        if: failure()
+        run: |
+          git reset --hard HEAD~1
+          docker-compose restart
+          cat local_dump.sql | docker exec -i curl_postgres psql postgres -U postgres

@@ -1,0 +1,171 @@
+version: '3'
+
+services:
+  nginx:
+    container_name: nginx
+    image: nginx:latest
+    ports:
+      - "80:80"
+      - "443:443"
+    restart: unless-stopped
+    volumes:
+      - nginx_conf:/etc/nginx/conf.d/:ro
+      - certbot_www:/var/www/certbot/:ro
+      - certbot_conf:/etc/nginx/ssl/:ro
+      - static:/static/
+      - media:/media/
+    networks:
+      - main_network
+
+  certbot:
+    image: certbot/certbot:latest
+    volumes:
+      - certbot_www:/var/www/certbot/:rw
+      - certbot_conf:/etc/letsencrypt/:rw
+    networks:
+      - main_network
+
+  backend:
+    container_name: backend
+    build: .
+    command: uvicorn config.asgi:application --host 0.0.0.0 --port 8000 --reload
+    restart: always
+    volumes:
+      - ./backend:/backend
+      - media:/backend/media
+      - static:/backend/static
+    ports:
+      - "8000:8000"
+    env_file:
+      - .env
+    depends_on:
+      - postgres
+      - redis
+    networks:
+      - main_network
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "5gb"
+
+  bot:
+    container_name: bot
+    build: .
+    command: python run_polling.py
+    restart: always
+    volumes:
+      - ./backend:/backend
+    env_file:
+      - .env
+    networks:
+      - main_network
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "5gb"
+
+  postgres:
+    container_name: postgres
+    command:
+      - "postgres"
+      - "-c"
+      - "max_connections=500"
+    image: postgres:15-alpine
+    restart: always
+    volumes:
+      - postgresql-data:/var/lib/postgresql/data
+    expose:
+      - 5432
+    env_file:
+      - .env
+    networks:
+      - main_network
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "5gb"
+
+  redis:
+    image: redis:7.0.10-alpine
+    restart: always
+    container_name: redis
+    expose:
+      - 6379
+    networks:
+      - main_network
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "5gb"
+
+  rabbitmq:
+    restart: always
+    container_name: rabbitmq
+    image: rabbitmq:3.10
+    expose:
+      - "5672"
+      - "15672"
+    volumes:
+      - rabbitmq-data:/var/lib/rabbitmq
+    networks:
+      - main_network
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "5gb"
+
+  celery:
+    container_name: celery
+    restart: always
+    build:
+      dockerfile: ./Dockerfile
+      context: .
+    volumes:
+      - ./backend:/backend:cached
+      - media:/backend/media
+    env_file:
+      - .env
+    command: celery -A config.celery worker --beat --loglevel=info
+    depends_on:
+      - backend
+      - postgres
+      - rabbitmq
+    networks:
+      - main_network
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "5gb"
+
+  celery-beat:
+    restart: always
+    build:
+      dockerfile: ./Dockerfile
+      context: .
+    command: celery -A config.celery beat --loglevel=info --scheduler django_celery_beat.schedulers:DatabaseScheduler
+    container_name: curl_celery-beat
+    env_file: .env
+    volumes:
+      - ./backend:/backend:cached
+      - media:/backend/media
+    depends_on:
+      - backend
+      - postgres
+      - rabbitmq
+    networks:
+      - main_network
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "5gb"
+
+networks:
+  main_network:
+volumes:
+  postgresql-data:
+  rabbitmq-data:
+  media:
+  static:
+  certbot_www:
+  certbot_conf:
+  nginx_conf:
