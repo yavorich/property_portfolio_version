@@ -59,18 +59,7 @@ WELCOME_TEXT = (
 
 HELP_TEXT = (
     "<b>Удаление водяных знаков</b>\n"
-    "По умолчанию используется Dewatermark.ai — сам находит знак и удаляет. "
-    "Просто пришлите фотографию.\n\n"
-    "Режимы (подпись к фото):\n"
-    "• без подписи → <b>Dewatermark.ai</b> (авто)\n"
-    "• <code>detect</code> → OCR → Stability AI Erase\n"
-    "• <code>debug</code> → превью найденных OCR-регионов (без API)\n"
-    "• <code>stability</code> или произвольный текст → Stability AI S&amp;R "
-    "(напр. <code>stability ASCO logo</code>). Добавьте <code>x2</code>..<code>x5</code> "
-    "для нескольких проходов\n"
-    "• <code>mask</code> → ручная прямоугольная маска + Stability Erase\n"
-    "• <code>x y w h</code> (4 числа 0..1) → маска с заданной геометрией\n"
-    "• <code>debug mask</code> / <code>debug x y w h</code> → превью ручной маски\n\n"
+    "Просто пришлите фотографию — бот вернёт очищенное изображение.\n\n"
     "<b>Парсинг листингов</b>\n"
     "Пришлите ссылку вида <code>https://www.bayut.com/property/details-…</code>."
 )
