@@ -38,6 +38,7 @@ SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
 LOCAL_APPS = [
     "apps.account",
     "apps.listings",
+    "apps.watermark",
 ]
 
 THIRD_PARTY_APPS = [
@@ -207,6 +208,13 @@ UNFOLD = {
 TELEGRAM_BOT_TOKEN = environ.get("TELEGRAM_BOT_TOKEN")
 TELEGRAM_PROXY_URL = environ.get("TELEGRAM_PROXY_URL")
 TELEGRAM_PROXY_FILE = environ.get("TELEGRAM_PROXY_FILE")
+
+STABILITY_API_KEY = environ.get("STABILITY_API_KEY", "")
+DEWATERMARK_API_KEY = environ.get("DEWATERMARK_API_KEY", "")
+DEWATERMARK_API_URL = environ.get(
+    "DEWATERMARK_API_URL",
+    "https://platform.dewatermark.ai/api/object_removal/v2/erase_watermark",
+)
 
 if TELEGRAM_BOT_TOKEN:
     _bot_request = HTTPXRequest(proxy=TELEGRAM_PROXY_URL) if TELEGRAM_PROXY_URL else None

@@ -10,6 +10,7 @@ RUN apt-get update \
         wget ca-certificates \
         libxrender1 libfontconfig1 libjpeg62-turbo \
         xfonts-75dpi xfonts-base \
+        tesseract-ocr tesseract-ocr-eng \
     && wget -qO /tmp/wkhtmltox.deb \
         https://github.com/wkhtmltopdf/packaging/releases/download/0.12.6.1-3/wkhtmltox_0.12.6.1-3.bookworm_amd64.deb \
     && apt-get install -y --no-install-recommends /tmp/wkhtmltox.deb \

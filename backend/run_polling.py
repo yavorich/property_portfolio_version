@@ -4,8 +4,9 @@ import asyncio
 import logging
 
 from django.conf import settings
-from telegram import Bot, BotCommand
-from telegram.ext import Application, ApplicationBuilder
+from telegram import Bot, BotCommand, Update
+from telegram.error import NetworkError, TimedOut
+from telegram.ext import Application, ApplicationBuilder, ContextTypes
 from telegram.request import HTTPXRequest
 
 from telegram_bot.handlers import start_handlers
@@ -63,6 +64,26 @@ async def _post_init(application: Application) -> None:
     await application.bot.set_my_commands(BOT_COMMANDS)
 
 
+async def _on_error(update: object, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """Swallow transient network errors so the handler chain keeps running.
+
+    PTB propagates exceptions out of handlers when no error handler is registered,
+    so a flaky SOCKS5 proxy reply would otherwise surface to the user as a crash.
+    """
+    err = context.error
+    if isinstance(err, (NetworkError, TimedOut)):
+        logger.warning("Transient network error: %r", err)
+        return
+    logger.exception("Unhandled handler error", exc_info=err)
+    try:
+        if isinstance(update, Update) and update.effective_message:
+            await update.effective_message.reply_text(
+                "❌ Произошла ошибка. Попробуйте ещё раз."
+            )
+    except Exception:
+        pass
+
+
 def run_polling() -> None:
     """Run bot in polling mode. Picks the first working proxy, then starts the app once."""
 
@@ -79,6 +100,8 @@ def run_polling() -> None:
 
     for handlers in [start_handlers]:
         application.add_handlers(handlers)
+
+    application.add_error_handler(_on_error)
 
     logger.info("Starting polling via %s", proxy or "direct connection")
     application.run_polling(allowed_updates=["message"])
