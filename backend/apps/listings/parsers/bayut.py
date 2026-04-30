@@ -158,11 +158,12 @@ def _collect_photo_urls(data: dict, property_id: str) -> list[str]:
         return []
 
     logger.info(
-        "Bayut id=%s media keys=%s photo_count=%s cover=%s",
+        "Bayut id=%s media keys=%s photo_count=%s cover=%r media_dump=%s",
         property_id,
         list(media.keys()),
         media.get("photo_count"),
-        bool(media.get("cover_photo")),
+        media.get("cover_photo"),
+        _truncate_repr(media, limit=800),
     )
 
     urls: list[str] = []
