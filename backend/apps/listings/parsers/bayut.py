@@ -121,11 +121,7 @@ class BayutParser:
                     or contact.get("whatsapp")
                 )
 
-        media = data.get("media") or {}
-        if isinstance(media, dict):
-            photos = media.get("photos")
-            if isinstance(photos, list):
-                listing.photo_urls = [p for p in photos if isinstance(p, str) and p]
+        listing.photo_urls = _collect_photo_urls(data, property_id)
 
         logger.info(
             "Bayut API parsed id=%s title=%r address=%r price=%s photos=%d",
@@ -148,6 +144,52 @@ def _dig(obj: Any, *keys: str) -> Any:
         else:
             return None
     return obj
+
+
+def _collect_photo_urls(data: dict, property_id: str) -> list[str]:
+    media = data.get("media")
+    if not isinstance(media, dict):
+        logger.warning("Bayut id=%s: no media in response", property_id)
+        return []
+
+    logger.info(
+        "Bayut id=%s media keys=%s photo_count=%s cover=%s",
+        property_id,
+        list(media.keys()),
+        media.get("photo_count"),
+        bool(media.get("cover_photo")),
+    )
+
+    urls: list[str] = []
+    photos = media.get("photos")
+    if isinstance(photos, list):
+        for item in photos:
+            if isinstance(item, str) and item:
+                urls.append(item)
+            elif isinstance(item, dict):
+                candidate = (
+                    item.get("url")
+                    or item.get("full")
+                    or item.get("large")
+                    or item.get("original")
+                    or item.get("main")
+                    or item.get("src")
+                )
+                if candidate:
+                    urls.append(candidate)
+
+    if not urls and (cover := media.get("cover_photo")):
+        if isinstance(cover, str) and cover:
+            urls.append(cover)
+
+    # De-dup, preserve order
+    seen: set[str] = set()
+    deduped = []
+    for url in urls:
+        if url not in seen:
+            seen.add(url)
+            deduped.append(url)
+    return deduped
 
 
 def _format_address(location: dict) -> str:
