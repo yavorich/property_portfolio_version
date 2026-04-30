@@ -216,6 +216,12 @@ DEWATERMARK_API_URL = environ.get(
     "https://platform.dewatermark.ai/api/object_removal/v2/erase_watermark",
 )
 
+BAYUT_API_KEY = environ.get("BAYUT_API_KEY", "")
+BAYUT_API_HOST = environ.get("BAYUT_API_HOST", "uae-real-estate2.p.rapidapi.com")
+BAYUT_API_BASE_URL = environ.get(
+    "BAYUT_API_BASE_URL", "https://uae-real-estate2.p.rapidapi.com"
+)
+
 if TELEGRAM_BOT_TOKEN:
     _bot_request = HTTPXRequest(proxy=TELEGRAM_PROXY_URL) if TELEGRAM_PROXY_URL else None
     MAIN_BOT = Bot(TELEGRAM_BOT_TOKEN, request=_bot_request) if _bot_request else Bot(TELEGRAM_BOT_TOKEN)
