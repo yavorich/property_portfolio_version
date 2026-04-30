@@ -137,6 +137,11 @@ def _as_str(value: Any) -> str:
     return str(value).strip()
 
 
+def _truncate_repr(value: Any, limit: int = 200) -> str:
+    text = repr(value)
+    return text if len(text) <= limit else text[:limit] + "…"
+
+
 def _dig(obj: Any, *keys: str) -> Any:
     for key in keys:
         if isinstance(obj, dict):
@@ -162,7 +167,13 @@ def _collect_photo_urls(data: dict, property_id: str) -> list[str]:
 
     urls: list[str] = []
     photos = media.get("photos")
-    if isinstance(photos, list):
+    if isinstance(photos, list) and photos:
+        sample = photos[0]
+        sample_keys = list(sample.keys()) if isinstance(sample, dict) else type(sample).__name__
+        logger.info(
+            "Bayut id=%s photos[0] type=%s sample=%r keys=%s",
+            property_id, type(photos[0]).__name__, _truncate_repr(sample), sample_keys,
+        )
         for item in photos:
             if isinstance(item, str) and item:
                 urls.append(item)
@@ -174,9 +185,19 @@ def _collect_photo_urls(data: dict, property_id: str) -> list[str]:
                     or item.get("original")
                     or item.get("main")
                     or item.get("src")
+                    or item.get("photo")
+                    or item.get("link")
+                    or item.get("path")
                 )
                 if candidate:
                     urls.append(candidate)
+                else:
+                    # Try to assemble from id/key pieces (Bayut S3 pattern)
+                    photo_id = item.get("id") or item.get("photo_id") or item.get("key")
+                    if photo_id:
+                        urls.append(
+                            f"https://images.bayut.com/thumbnails/{photo_id}-800x600.jpeg"
+                        )
 
     if not urls and (cover := media.get("cover_photo")):
         if isinstance(cover, str) and cover:
