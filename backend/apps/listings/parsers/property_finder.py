@@ -1,10 +1,14 @@
+import hashlib
 import json
 import logging
 import re
+from pathlib import Path
 from typing import Any
 
 import httpx
 from bs4 import BeautifulSoup
+from django.conf import settings
+from django.utils import timezone
 
 from .base import ParsedListing
 
@@ -22,9 +26,19 @@ DEFAULT_HEADERS = {
     ),
     "Accept": (
         "text/html,application/xhtml+xml,application/xml;q=0.9,"
-        "image/avif,image/webp,*/*;q=0.8"
+        "image/avif,image/webp,image/apng,*/*;q=0.8"
     ),
-    "Accept-Language": "en-US,en;q=0.9",
+    "Accept-Language": "en-US,en;q=0.9,ru;q=0.8",
+    "Accept-Encoding": "gzip, deflate, br",
+    "Cache-Control": "no-cache",
+    "Pragma": "no-cache",
+    "Sec-Ch-Ua": '"Chromium";v="124", "Not-A.Brand";v="99", "Google Chrome";v="124"',
+    "Sec-Ch-Ua-Mobile": "?0",
+    "Sec-Ch-Ua-Platform": '"Windows"',
+    "Sec-Fetch-Dest": "document",
+    "Sec-Fetch-Mode": "navigate",
+    "Sec-Fetch-Site": "none",
+    "Sec-Fetch-User": "?1",
     "Upgrade-Insecure-Requests": "1",
 }
 
@@ -45,9 +59,19 @@ class PropertyFinderParser:
 
     async def parse(self, url: str) -> ParsedListing:
         response = await self.http.get(url, headers=DEFAULT_HEADERS, follow_redirects=True)
-        response.raise_for_status()
         html = response.text
         final_url = str(response.url)
+
+        logger.info(
+            "PF fetch: status=%s final_url=%s bytes=%d",
+            response.status_code, final_url, len(html),
+        )
+
+        if response.status_code != 200 or len(html) < 5000:
+            logger.warning(
+                "PF likely bot-blocked (DataDome): status=%s bytes=%d",
+                response.status_code, len(html),
+            )
 
         listing = ParsedListing(source=self.SOURCE, source_url=final_url)
         soup = BeautifulSoup(html, "html.parser")
@@ -73,9 +97,10 @@ class PropertyFinderParser:
         )
 
         if not listing.title and not listing.photo_urls and not listing.price:
+            dump_path = _dump_html(url, html)
             raise ValueError(
-                "Failed to extract Property Finder listing — page structure "
-                "changed or request was blocked."
+                "Failed to extract Property Finder listing — page likely "
+                f"bot-blocked (DataDome) or structure changed. HTML dumped to {dump_path}"
             )
         return listing
 
@@ -277,3 +302,16 @@ def _dig(obj: Any, *keys: str) -> Any:
         else:
             return None
     return obj
+
+
+def _dump_html(url: str, html: str) -> Path:
+    debug_dir = Path(settings.MEDIA_ROOT) / "debug" / "property_finder"
+    debug_dir.mkdir(parents=True, exist_ok=True)
+    stamp = timezone.now().strftime("%Y%m%d-%H%M%S")
+    digest = hashlib.sha1(url.encode("utf-8")).hexdigest()[:8]
+    path = debug_dir / f"{stamp}-{digest}.html"
+    try:
+        path.write_text(html, encoding="utf-8")
+    except OSError:
+        logger.exception("Failed to write HTML dump to %s", path)
+    return path
