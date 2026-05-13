@@ -12,15 +12,25 @@ logger = logging.getLogger(__name__)
 StatusCallback = Callable[[str], Awaitable[None]]
 
 
-async def remove_watermarks(listing: Listing, on_status: StatusCallback) -> int:
+async def remove_watermarks(
+    listing: Listing,
+    on_status: StatusCallback,
+    *,
+    limit: int | None = None,
+) -> int:
     """Run each downloaded photo through Dewatermark.ai and store as ``processed``.
 
-    Returns the number of successfully processed photos.
+    Returns the number of successfully processed photos. ``limit`` caps the
+    number of photos processed (cheapest way to control API quota — we only
+    need the photos that actually go into the PDF).
     """
-    photos = [
-        photo async for photo in listing.photos.filter(original__isnull=False).order_by("index")
-        if photo.original
-    ]
+    photos: list[ListingPhoto] = []
+    async for photo in listing.photos.order_by("index"):
+        if not photo.original:
+            continue
+        photos.append(photo)
+        if limit and len(photos) >= limit:
+            break
     total = len(photos)
     if not total:
         return 0

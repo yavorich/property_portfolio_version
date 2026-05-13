@@ -13,7 +13,7 @@ from django.utils import timezone
 from apps.account.models import User
 from apps.listings.models import Listing, ListingPhoto
 from apps.listings.parsers import ParsedListing, get_parser
-from apps.listings.services.presentation import generate_pdf
+from apps.listings.services.presentation import PRESENTATION_PHOTO_COUNT, generate_pdf
 from apps.listings.services.watermark_batch import remove_watermarks
 from telegram_bot.proxies import load_proxies
 
@@ -49,7 +49,7 @@ async def process_url(url: str, user: User, on_status: StatusCallback) -> Listin
     listing.status = Listing.Status.PROCESSING
     await listing.asave(update_fields=["status", "updated_at"])
 
-    await remove_watermarks(listing, on_status)
+    await remove_watermarks(listing, on_status, limit=PRESENTATION_PHOTO_COUNT)
 
     await on_status("📄 Формирую презентацию…")
     await generate_pdf(listing)

@@ -15,6 +15,8 @@ from apps.listings.models import Listing, ListingPhoto
 
 logger = logging.getLogger(__name__)
 
+PRESENTATION_PHOTO_COUNT = 4  # 1 hero + 3 thumbnails on the cover page
+
 PDFKIT_OPTIONS = {
     "enable-local-file-access": "",
     "page-size": "A4",
