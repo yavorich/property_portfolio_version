@@ -1,15 +1,11 @@
 import asyncio
 import logging
-import re
 import tempfile
 from pathlib import Path
-from urllib.parse import urlparse
 
 import pdfkit
-from django.conf import settings
 from django.core.files import File
 from django.template.loader import render_to_string
-from django.utils import timezone
 
 from apps.listings.models import Listing, ListingPhoto
 
@@ -44,6 +40,10 @@ def _generate_sync(listing: Listing) -> Path | None:
 
     placeholder_thumbs = range(max(0, 3 - len(thumb_urls))) if thumb_urls else range(0)
 
+    address_parts = [
+        p.strip() for p in (listing.address or "").split(",") if p.strip()
+    ]
+
     context = {
         "listing": listing,
         "hero_url": hero_url,
@@ -51,9 +51,7 @@ def _generate_sync(listing: Listing) -> Path | None:
         "placeholder_thumbs": placeholder_thumbs,
         "price_formatted": _format_price(listing),
         "specs_line": _format_specs(listing),
-        "source_label": dict(Listing.Source.choices).get(listing.source, listing.source),
-        "listing_external_id": _extract_external_id(listing.source_url),
-        "today": timezone.localdate().strftime("%d %b %Y"),
+        "address_parts": address_parts,
     }
 
     html = render_to_string("listings/listing_pdf.html", context)
@@ -109,15 +107,3 @@ def _format_specs(listing: Listing) -> str:
     return " • ".join(parts)
 
 
-def _extract_external_id(url: str) -> str:
-    if not url:
-        return ""
-    try:
-        path = urlparse(url).path
-    except ValueError:
-        return ""
-    # Bayut: /details-15100141.html ; PF: ...-77378958.html
-    match = re.search(r"-(\d{5,})\.html", path)
-    if match:
-        return match.group(1)
-    return ""

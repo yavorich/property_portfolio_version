@@ -40,18 +40,29 @@ async def remove_watermarks(
         await on_status(f"🧹 Удаляю водяной знак ({i}/{total})…")
         try:
             image_bytes = await asyncio.to_thread(_read_original, photo)
+            original_size = len(image_bytes)
             cleaned = await clean_image_dewatermark(image_bytes)
+            cleaned_size = len(cleaned)
             filename = f"{photo.index:04d}.png"
             await asyncio.to_thread(
                 photo.processed.save, filename, ContentFile(cleaned), False
             )
             await photo.asave(update_fields=["processed"])
             processed += 1
+            logger.info(
+                "Watermark removed listing=%s photo_index=%s "
+                "original=%d bytes → cleaned=%d bytes saved=%s",
+                listing.id, photo.index, original_size, cleaned_size, photo.processed.name,
+            )
         except Exception:
             logger.exception(
                 "Failed to remove watermark for listing=%s photo_index=%s",
                 listing.id, photo.index,
             )
+    logger.info(
+        "Watermark batch done: listing=%s processed=%d/%d",
+        listing.id, processed, total,
+    )
     return processed
 
 
