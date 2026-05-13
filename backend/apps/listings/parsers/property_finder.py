@@ -72,13 +72,18 @@ class PropertyFinderParser:
         # Some vendors wrap the payload in {"data": {...}} or {"property": {...}}.
         body = _unwrap(data)
 
+        logger.info(
+            "PF API outer keys=%s, body keys=%s, body sample=%s",
+            list(data.keys()) if isinstance(data, dict) else type(data).__name__,
+            list(body.keys()) if isinstance(body, dict) else type(body).__name__,
+            _truncate_repr(body, limit=600),
+        )
+
         listing = ParsedListing(
             source=self.SOURCE,
             source_url=_first_str(body.get("share_url"), body.get("url")) or source_url,
             raw_data=data,
         )
-
-        logger.info("PF API top-level keys=%s", list(body.keys())[:30])
 
         listing.title = _first_str(
             body.get("title"), body.get("name"), body.get("listing_title")
@@ -184,6 +189,11 @@ def _as_str(value: Any) -> str:
     if value is None:
         return ""
     return str(value).strip()
+
+
+def _truncate_repr(value: Any, limit: int = 600) -> str:
+    text = repr(value)
+    return text if len(text) <= limit else text[:limit] + "…"
 
 
 def _first_str(*values: Any) -> str:

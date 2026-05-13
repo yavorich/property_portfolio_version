@@ -166,6 +166,19 @@ def _collect_photo_urls(data: dict, property_id: str) -> list[str]:
             if url:
                 urls.append(url)
 
+    if not urls:
+        # Help diagnose new/changed response shape — dump media on miss
+        first_photo = photos[0] if isinstance(photos, list) and photos else None
+        logger.warning(
+            "Bayut id=%s: no photo URLs extracted. media keys=%s, "
+            "photo_count=%s, cover=%r, photos[0]=%r",
+            property_id,
+            list(media.keys()),
+            media.get("photo_count"),
+            media.get("cover_photo"),
+            first_photo,
+        )
+
     # De-dup, preserve order
     seen: set[str] = set()
     deduped: list[str] = []
