@@ -1,6 +1,7 @@
 import asyncio
 import logging
 import mimetypes
+import ssl
 from pathlib import Path
 from typing import Awaitable, Callable
 from urllib.parse import urlparse
@@ -71,7 +72,18 @@ async def _open_working_client(
 
 
 def _build_client(proxy: str | None, timeout: httpx.Timeout) -> httpx.AsyncClient:
-    kwargs: dict = {"timeout": timeout, "follow_redirects": True}
+    # Some RapidAPI hosts contain an underscore (e.g. b_yut-data-api.p.rapidapi.com)
+    # which is technically invalid in DNS labels — Python's ssl strictly rejects
+    # the wildcard match, while curl accepts it. We keep cert-chain validation
+    # but skip hostname check.
+    ssl_ctx = ssl.create_default_context()
+    ssl_ctx.check_hostname = False
+
+    kwargs: dict = {
+        "timeout": timeout,
+        "follow_redirects": True,
+        "verify": ssl_ctx,
+    }
     if proxy:
         kwargs["proxy"] = proxy
     return httpx.AsyncClient(**kwargs)
