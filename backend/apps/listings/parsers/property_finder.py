@@ -76,7 +76,7 @@ class PropertyFinderParser:
             "PF API outer keys=%s, body keys=%s, body sample=%s",
             list(data.keys()) if isinstance(data, dict) else type(data).__name__,
             list(body.keys()) if isinstance(body, dict) else type(body).__name__,
-            _truncate_repr(body, limit=600),
+            _truncate_repr(body, limit=4000),
         )
 
         listing = ParsedListing(
@@ -175,14 +175,22 @@ class PropertyFinderParser:
 
 
 def _unwrap(data: dict) -> dict:
-    """Return the inner property object regardless of common wrappers."""
+    """Walk through common wrapper keys (``data`` → ``property`` etc.) until the
+    inner property object is reached. Up to 4 levels deep."""
     if not isinstance(data, dict):
         return {}
-    for key in ("data", "property", "listing", "result"):
-        inner = data.get(key)
-        if isinstance(inner, dict) and inner:
-            return inner
-    return data
+    current = data
+    for _ in range(4):
+        next_step = None
+        for key in ("data", "property", "listing", "result"):
+            inner = current.get(key)
+            if isinstance(inner, dict) and inner:
+                next_step = inner
+                break
+        if next_step is None or next_step is current:
+            break
+        current = next_step
+    return current
 
 
 def _as_str(value: Any) -> str:
@@ -258,10 +266,13 @@ def _collect_photo_urls(body: dict) -> list[str]:
     )
 
     if isinstance(candidates, dict):
+        # PF puts photos under images.property (list of size variants)
         candidates = (
-            candidates.get("photos")
+            candidates.get("property")
+            or candidates.get("photos")
             or candidates.get("items")
             or candidates.get("images")
+            or candidates.get("list")
             or []
         )
 
@@ -273,14 +284,18 @@ def _collect_photo_urls(body: dict) -> list[str]:
         if isinstance(item, str) and item.startswith(("http://", "https://")):
             urls.append(item)
         elif isinstance(item, dict):
+            # Prefer the largest available variant
             candidate = (
                 item.get("full")
-                or item.get("url")
-                or item.get("large")
                 or item.get("original")
+                or item.get("large")
+                or item.get("url")
+                or item.get("medium")
                 or item.get("src")
                 or item.get("photo")
                 or item.get("link")
+                or item.get("small")
+                or item.get("thumb")
             )
             if candidate and isinstance(candidate, str):
                 urls.append(candidate)
