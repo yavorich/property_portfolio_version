@@ -221,6 +221,22 @@ BAYUT_API_HOST = environ.get("BAYUT_API_HOST", "uae-real-estate2.p.rapidapi.com"
 BAYUT_API_BASE_URL = environ.get(
     "BAYUT_API_BASE_URL", "https://uae-real-estate2.p.rapidapi.com"
 )
+BAYUT_PHOTO_URL_TEMPLATE = environ.get(
+    "BAYUT_PHOTO_URL_TEMPLATE",
+    "https://images.bayut.com/thumbnails/{id}-800x600.jpeg",
+)
+
+PROPERTYFINDER_API_KEY = environ.get("PROPERTYFINDER_API_KEY", "")
+PROPERTYFINDER_API_HOST = environ.get(
+    "PROPERTYFINDER_API_HOST", "propertyfinder-uae-data.p.rapidapi.com"
+)
+PROPERTYFINDER_API_BASE_URL = environ.get(
+    "PROPERTYFINDER_API_BASE_URL", "https://propertyfinder-uae-data.p.rapidapi.com"
+)
+
+# Legacy DataDome bypass (no longer used — kept for backward compat env files)
+PROPERTY_FINDER_COOKIE = environ.get("PROPERTY_FINDER_COOKIE", "")
+PROPERTY_FINDER_USER_AGENT = environ.get("PROPERTY_FINDER_USER_AGENT", "")
 
 if TELEGRAM_BOT_TOKEN:
     _bot_request = HTTPXRequest(proxy=TELEGRAM_PROXY_URL) if TELEGRAM_PROXY_URL else None

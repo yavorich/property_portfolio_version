@@ -137,11 +137,6 @@ def _as_str(value: Any) -> str:
     return str(value).strip()
 
 
-def _truncate_repr(value: Any, limit: int = 200) -> str:
-    text = repr(value)
-    return text if len(text) <= limit else text[:limit] + "…"
-
-
 def _dig(obj: Any, *keys: str) -> Any:
     for key in keys:
         if isinstance(obj, dict):
@@ -157,61 +152,65 @@ def _collect_photo_urls(data: dict, property_id: str) -> list[str]:
         logger.warning("Bayut id=%s: no media in response", property_id)
         return []
 
-    logger.info(
-        "Bayut id=%s media keys=%s photo_count=%s cover=%r media_dump=%s",
-        property_id,
-        list(media.keys()),
-        media.get("photo_count"),
-        media.get("cover_photo"),
-        _truncate_repr(media, limit=800),
-    )
-
     urls: list[str] = []
     photos = media.get("photos")
-    if isinstance(photos, list) and photos:
-        sample = photos[0]
-        sample_keys = list(sample.keys()) if isinstance(sample, dict) else type(sample).__name__
-        logger.info(
-            "Bayut id=%s photos[0] type=%s sample=%r keys=%s",
-            property_id, type(photos[0]).__name__, _truncate_repr(sample), sample_keys,
-        )
+    if isinstance(photos, list):
         for item in photos:
-            if isinstance(item, str) and item:
-                urls.append(item)
-            elif isinstance(item, dict):
-                candidate = (
-                    item.get("url")
-                    or item.get("full")
-                    or item.get("large")
-                    or item.get("original")
-                    or item.get("main")
-                    or item.get("src")
-                    or item.get("photo")
-                    or item.get("link")
-                    or item.get("path")
-                )
-                if candidate:
-                    urls.append(candidate)
-                else:
-                    # Try to assemble from id/key pieces (Bayut S3 pattern)
-                    photo_id = item.get("id") or item.get("photo_id") or item.get("key")
-                    if photo_id:
-                        urls.append(
-                            f"https://images.bayut.com/thumbnails/{photo_id}-800x600.jpeg"
-                        )
+            url = _resolve_bayut_photo(item)
+            if url:
+                urls.append(url)
 
-    if not urls and (cover := media.get("cover_photo")):
-        if isinstance(cover, str) and cover:
-            urls.append(cover)
+    if not urls:
+        if cover := media.get("cover_photo"):
+            url = _resolve_bayut_photo(cover)
+            if url:
+                urls.append(url)
 
     # De-dup, preserve order
     seen: set[str] = set()
-    deduped = []
+    deduped: list[str] = []
     for url in urls:
         if url not in seen:
             seen.add(url)
             deduped.append(url)
     return deduped
+
+
+def _resolve_bayut_photo(item: Any) -> str | None:
+    """Bayut photos may arrive as integer IDs, digit strings, ready URLs or dicts."""
+    if item is None:
+        return None
+    if isinstance(item, int):
+        return _photo_url_from_id(item)
+    if isinstance(item, str):
+        s = item.strip()
+        if not s:
+            return None
+        if s.startswith("http://") or s.startswith("https://"):
+            return s
+        if s.isdigit():
+            return _photo_url_from_id(s)
+        return None
+    if isinstance(item, dict):
+        for key in ("url", "full", "large", "original", "main", "src", "photo", "link", "path"):
+            v = item.get(key)
+            if isinstance(v, str) and (v.startswith("http://") or v.startswith("https://")):
+                return v
+        for key in ("id", "photo_id", "key"):
+            v = item.get(key)
+            if isinstance(v, (int, str)) and str(v).strip():
+                return _photo_url_from_id(v)
+    return None
+
+
+def _photo_url_from_id(photo_id: Any) -> str:
+    from django.conf import settings as _s
+    template = getattr(
+        _s,
+        "BAYUT_PHOTO_URL_TEMPLATE",
+        "https://images.bayut.com/thumbnails/{id}-800x600.jpeg",
+    )
+    return template.format(id=str(photo_id).strip())
 
 
 def _format_address(location: dict) -> str:
