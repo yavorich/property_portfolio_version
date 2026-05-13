@@ -13,6 +13,8 @@ from django.utils import timezone
 from apps.account.models import User
 from apps.listings.models import Listing, ListingPhoto
 from apps.listings.parsers import ParsedListing, get_parser
+from apps.listings.services.presentation import generate_pdf
+from apps.listings.services.watermark_batch import remove_watermarks
 from telegram_bot.proxies import load_proxies
 
 logger = logging.getLogger(__name__)
@@ -24,7 +26,7 @@ PHOTO_TIMEOUT = httpx.Timeout(60.0, connect=10.0)
 
 
 async def process_url(url: str, user: User, on_status: StatusCallback) -> Listing:
-    """Parse a listing URL, persist its data, and download all photos locally."""
+    """Parse a listing URL, persist its data, remove watermarks, build a PDF."""
 
     proxies = load_proxies()
     http, proxy = await _open_working_client(url, proxies)
@@ -41,12 +43,20 @@ async def process_url(url: str, user: User, on_status: StatusCallback) -> Listin
         if parsed.photo_urls:
             await on_status(f"🖼 Скачиваю фото ({len(parsed.photo_urls)} шт.)…")
             await _download_photos(listing, parsed.photo_urls, http)
-
-        listing.status = Listing.Status.PARSED
-        await listing.asave(update_fields=["status", "updated_at"])
-        return listing
     finally:
         await http.aclose()
+
+    listing.status = Listing.Status.PROCESSING
+    await listing.asave(update_fields=["status", "updated_at"])
+
+    await remove_watermarks(listing, on_status)
+
+    await on_status("📄 Формирую презентацию…")
+    await generate_pdf(listing)
+
+    listing.status = Listing.Status.DONE
+    await listing.asave(update_fields=["status", "updated_at"])
+    return listing
 
 
 async def _open_working_client(
@@ -90,12 +100,13 @@ def _build_client(proxy: str | None, timeout: httpx.Timeout) -> httpx.AsyncClien
 
 
 async def _save_listing(user: User, parsed: ParsedListing) -> Listing:
-    return await Listing.objects.acreate(
+    listing = await Listing.objects.acreate(
         user=user,
         source=parsed.source,
         source_url=parsed.source_url,
         status=Listing.Status.PARSING,
         title=parsed.title,
+        property_type=parsed.property_type,
         address=parsed.address,
         description=parsed.description,
         price=parsed.price,
@@ -105,12 +116,16 @@ async def _save_listing(user: User, parsed: ParsedListing) -> Listing:
         rooms=parsed.rooms,
         bathrooms=parsed.bathrooms,
         floor=parsed.floor,
+        features=list(parsed.features or []),
         broker_name=parsed.broker_name,
         broker_phone=parsed.broker_phone,
         broker_email=parsed.broker_email,
         broker_agency=parsed.broker_agency,
         raw_data=parsed.raw_data,
     )
+    listing.reference_code = f"XE-R-{listing.id:04d}"
+    await listing.asave(update_fields=["reference_code", "updated_at"])
+    return listing
 
 
 async def _download_photos(

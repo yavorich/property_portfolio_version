@@ -83,6 +83,8 @@ class BayutParser:
 
         listing.title = _as_str(data.get("title"))
         listing.description = _as_str(data.get("description"))
+        listing.property_type = _extract_property_type(data)
+        listing.features = _extract_features(data)
 
         price = data.get("price")
         if isinstance(price, (int, float)):
@@ -134,6 +136,48 @@ def _as_str(value: Any) -> str:
     if value is None:
         return ""
     return str(value).strip()
+
+
+def _extract_property_type(data: dict) -> str:
+    """Return the most specific category name (e.g. ``Apartment``, ``Plot``)."""
+    category = data.get("category")
+    if not isinstance(category, list):
+        return ""
+    items = [c for c in category if isinstance(c, dict)]
+    items.sort(key=lambda c: c.get("level", -1), reverse=True)  # deepest first
+    for c in items:
+        name = c.get("nameSingular") or c.get("name")
+        if name:
+            return _as_str(name)
+    return ""
+
+
+def _extract_features(data: dict) -> list[str]:
+    """Flatten Bayut amenities into a plain list of feature names."""
+    amenities = data.get("amenities")
+    if not isinstance(amenities, list):
+        return []
+    features: list[str] = []
+    for group in amenities:
+        if not isinstance(group, dict):
+            continue
+        items = group.get("items")
+        if isinstance(items, list):
+            for item in items:
+                if isinstance(item, str) and item.strip():
+                    features.append(item.strip())
+                elif isinstance(item, dict):
+                    name = item.get("name") or item.get("title")
+                    if isinstance(name, str) and name.strip():
+                        features.append(name.strip())
+    # Dedup, keep order
+    seen: set[str] = set()
+    deduped: list[str] = []
+    for f in features:
+        if f not in seen:
+            seen.add(f)
+            deduped.append(f)
+    return deduped
 
 
 def _format_address(location: Any) -> str:

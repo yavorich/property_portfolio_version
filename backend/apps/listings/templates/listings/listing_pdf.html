@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>{{ listing.title }}</title>
+<style>
+  @page { size: A4; margin: 22mm 18mm; }
+  body { font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; color: #2c3144; font-size: 10.5pt; line-height: 1.55; margin: 0; }
+  a { color: #1c2645; }
+
+  /* Cover — small top header */
+  .cover-head-title { font-size: 11.5pt; font-weight: 600; margin: 0; }
+  .cover-head-price { font-size: 14pt; margin: 4pt 0 2pt; color: #1c2645; }
+  .cover-head-specs { font-size: 9.5pt; color: #707283; margin: 0 0 14pt; }
+
+  /* Hero & thumbs */
+  .hero-wrap { width: 100%; margin: 0 0 6pt; }
+  .hero { width: 100%; height: 95mm; object-fit: cover; display: block; }
+  .thumbs { width: 100%; border-collapse: separate; border-spacing: 4pt 0; }
+  .thumbs td { width: 33.33%; padding: 0; vertical-align: top; }
+  .thumbs img { width: 100%; height: 33mm; object-fit: cover; display: block; }
+  .thumbs td:first-child { padding-left: 0; }
+  .thumbs td:last-child { padding-right: 0; }
+
+  /* Cover — centered title block */
+  .cover-mid { margin-top: 14mm; text-align: center; }
+  .cover-mid-title { font-family: Georgia, 'Times New Roman', serif; font-weight: normal; font-size: 22pt; color: #1c2645; margin: 0 0 6pt; }
+  .cover-mid-price { font-size: 19pt; font-weight: bold; color: #1c2645; margin: 10pt 0; }
+  .cover-mid-specs { font-size: 10.5pt; color: #555; margin-top: 6pt; }
+  hr.line { border: 0; border-top: 1px solid #d3d6e0; width: 62%; margin: 5pt auto; }
+
+  .break { page-break-before: always; }
+
+  /* About + Features */
+  .about-table { width: 100%; border-collapse: separate; border-spacing: 6pt 0; }
+  .about-table td { vertical-align: top; padding: 14pt 16pt; background: #f3f4f8; width: 50%; }
+  .col-h { color: #1c2645; font-weight: bold; font-size: 12pt; border-bottom: 1px solid #d0d3dd; padding-bottom: 5pt; margin: 0 0 8pt; }
+  .col-body { font-size: 10pt; color: #353a4f; }
+  .col-body p { margin: 0 0 6pt; }
+  .feature-list { list-style: none; padding: 0; margin: 0; }
+  .feature-list li { padding-left: 0; margin-bottom: 4pt; }
+  .feature-list li::before { content: "• "; color: #1c2645; }
+  .empty { color: #888; }
+
+  /* Source */
+  .source-h { font-family: Georgia, serif; font-weight: normal; font-size: 22pt; color: #1c2645; text-align: center; margin: 28mm 0 4pt; }
+  .source-sub { text-align: center; color: #5a5e74; margin: 6pt 0 22pt; font-size: 10.5pt; }
+  .source-link { text-align: center; margin-bottom: 22pt; font-size: 9pt; word-break: break-all; }
+  .source-meta { width: 70%; margin: 12pt auto 0; border-collapse: collapse; }
+  .source-meta td { width: 50%; text-align: center; padding: 4pt 8pt; border-left: 1px solid #ddd; }
+  .source-meta td:first-child { border-left: none; }
+  .meta-lbl { font-size: 8.5pt; color: #8a8d9d; letter-spacing: 1.3pt; }
+  .meta-val { font-weight: bold; font-size: 11pt; color: #1c2645; margin-top: 6pt; }
+</style>
+</head>
+<body>
+
+  {# ── Page 1: Cover ─────────────────────────────────────── #}
+  <div class="cover-head-title">{{ listing.title }}</div>
+  {% if price_formatted %}<div class="cover-head-price">{{ price_formatted }}</div>{% endif %}
+  {% if specs_line %}<div class="cover-head-specs">{{ specs_line }}</div>{% endif %}
+
+  {% if hero_url %}
+    <div class="hero-wrap"><img class="hero" src="{{ hero_url }}"></div>
+  {% endif %}
+
+  {% if thumb_urls %}
+    <table class="thumbs"><tr>
+      {% for url in thumb_urls %}<td><img src="{{ url }}"></td>{% endfor %}
+      {% for _ in placeholder_thumbs %}<td></td>{% endfor %}
+    </tr></table>
+  {% endif %}
+
+  <div class="cover-mid">
+    <div class="cover-mid-title">{{ listing.title }}</div>
+    <hr class="line">
+    {% if price_formatted %}<div class="cover-mid-price">{{ price_formatted }}</div>{% endif %}
+    <hr class="line">
+    {% if specs_line %}<div class="cover-mid-specs">{{ specs_line }}</div>{% endif %}
+  </div>
+
+  {# ── Page 2: About + Features ──────────────────────────── #}
+  <div class="break"></div>
+  <table class="about-table"><tr>
+    <td>
+      <div class="col-h">About this property</div>
+      <div class="col-body">{{ listing.description|linebreaksbr|default:"—" }}</div>
+    </td>
+    <td>
+      <div class="col-h">Key Features</div>
+      <div class="col-body">
+        {% if listing.features %}
+          <ul class="feature-list">
+            {% for f in listing.features %}<li>{{ f }}</li>{% endfor %}
+          </ul>
+        {% else %}
+          <p class="empty">—</p>
+        {% endif %}
+      </div>
+    </td>
+  </tr></table>
+
+  {# ── Page 3: Source ────────────────────────────────────── #}
+  <div class="break"></div>
+  <div class="source-h">Source</div>
+  <hr class="line">
+  <div class="source-sub">This listing is published on {{ source_label }}</div>
+  <div class="source-link"><a href="{{ listing.source_url }}">{{ listing.source_url }}</a></div>
+  <table class="source-meta"><tr>
+    <td>
+      <div class="meta-lbl">LISTING ID</div>
+      <div class="meta-val">{{ listing_external_id|default:"—" }}</div>
+    </td>
+    <td>
+      <div class="meta-lbl">DATE</div>
+      <div class="meta-val">{{ today }}</div>
+    </td>
+  </tr></table>
+
+</body>
+</html>

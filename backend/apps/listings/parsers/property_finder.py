@@ -94,6 +94,10 @@ class PropertyFinderParser:
             body.get("descriptionText"),
             body.get("description_en"),
         )
+        listing.property_type = _first_str(
+            body.get("property_type"), body.get("propertyType"), body.get("type")
+        )
+        listing.features = _extract_pf_features(body)
 
         # Price
         price_val = body.get("price")
@@ -254,6 +258,49 @@ def _format_address(body: dict) -> str:
             location.get("title"),
         )
     return ""
+
+
+def _extract_pf_features(body: dict) -> list[str]:
+    """Best-effort flattening of PF features/amenities into a list of strings."""
+    candidates = (
+        body.get("features")
+        or body.get("amenities")
+        or body.get("key_features")
+        or body.get("keyFeatures")
+        or []
+    )
+    if isinstance(candidates, dict):
+        candidates = candidates.get("items") or candidates.get("list") or list(candidates.values())
+    if not isinstance(candidates, list):
+        return []
+
+    features: list[str] = []
+    for item in candidates:
+        if isinstance(item, str) and item.strip():
+            features.append(item.strip())
+        elif isinstance(item, dict):
+            # nested: {type, items} or {name}
+            nested = item.get("items") or item.get("list")
+            if isinstance(nested, list):
+                for n in nested:
+                    if isinstance(n, str) and n.strip():
+                        features.append(n.strip())
+                    elif isinstance(n, dict):
+                        v = n.get("name") or n.get("title") or n.get("label")
+                        if isinstance(v, str) and v.strip():
+                            features.append(v.strip())
+            else:
+                v = item.get("name") or item.get("title") or item.get("label")
+                if isinstance(v, str) and v.strip():
+                    features.append(v.strip())
+
+    seen: set[str] = set()
+    deduped: list[str] = []
+    for f in features:
+        if f not in seen:
+            seen.add(f)
+            deduped.append(f)
+    return deduped
 
 
 def _collect_photo_urls(body: dict) -> list[str]:

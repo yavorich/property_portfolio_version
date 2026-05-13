@@ -9,6 +9,7 @@ class ParsedListing:
     source: str
     source_url: str
     title: str = ""
+    property_type: str = ""
     address: str = ""
     description: str = ""
     price: int | None = None
@@ -18,6 +19,7 @@ class ParsedListing:
     rooms: int | None = None
     bathrooms: int | None = None
     floor: str = ""
+    features: list[str] = field(default_factory=list)
     broker_name: str = ""
     broker_phone: str = ""
     broker_email: str = ""

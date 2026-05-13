@@ -28,7 +28,10 @@ class Listing(models.Model):
     )
     error = models.TextField("Ошибка", blank=True)
 
+    reference_code = models.CharField("Reference", max_length=32, blank=True)
+
     title = models.CharField("Название", max_length=512, blank=True)
+    property_type = models.CharField("Тип объекта", max_length=64, blank=True)
     address = models.CharField("Адрес", max_length=512, blank=True)
     description = models.TextField("Описание", blank=True)
 
@@ -41,12 +44,20 @@ class Listing(models.Model):
     bathrooms = models.IntegerField("Санузлов", null=True, blank=True)
     floor = models.CharField("Этаж", max_length=64, blank=True)
 
+    features = models.JSONField("Особенности", default=list, blank=True)
+
     broker_name = models.CharField("Брокер — имя", max_length=256, blank=True)
     broker_phone = models.CharField("Брокер — телефон", max_length=64, blank=True)
     broker_email = models.EmailField("Брокер — email", blank=True)
     broker_agency = models.CharField("Агентство", max_length=256, blank=True)
 
     raw_data = models.JSONField("Сырые данные", null=True, blank=True)
+
+    presentation = models.FileField(
+        "Презентация (PDF)",
+        upload_to="listings/%Y/%m/presentation/",
+        null=True, blank=True,
+    )
 
     created_at = models.DateTimeField("Создан", auto_now_add=True)
     updated_at = models.DateTimeField("Обновлён", auto_now=True)

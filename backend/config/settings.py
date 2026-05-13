@@ -146,6 +146,13 @@ CELERY_RESULT_BACKEND = "rpc://"
 CELERY_RESULT_SERIALIZER = "json"
 CELERY_TASK_SERIALIZER = "json"
 
+CELERY_BEAT_SCHEDULE = {
+    "cleanup_old_media": {
+        "task": "apps.listings.cleanup_old_media",
+        "schedule": 24 * 60 * 60,  # once a day
+    },
+}
+
 DJANGO_CELERY_BEAT_TZ_AWARE = True
 
 # Password validation

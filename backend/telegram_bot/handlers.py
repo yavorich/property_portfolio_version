@@ -242,7 +242,26 @@ async def handle_message(update: Update, context: CallbackContext) -> None:
         await status.edit_text("❌ Ошибка при обработке. Попробуйте позже.")
         return
 
-    await on_status(_format_result(listing, await listing.photos.acount()))
+    photo_count = await listing.photos.acount()
+    await on_status(_format_result(listing, photo_count))
+
+    if listing.presentation:
+        try:
+            pdf_bytes = await asyncio.to_thread(_read_presentation, listing)
+            await message.reply_document(
+                document=BytesIO(pdf_bytes),
+                filename=f"{listing.reference_code or listing.uuid}.pdf",
+                caption=listing.title or "Презентация",
+            )
+        except FileNotFoundError:
+            logger.warning("Presentation file missing for listing %s", listing.id)
+        except Exception:
+            logger.exception("Failed to send presentation for listing %s", listing.id)
+
+
+def _read_presentation(listing: Listing) -> bytes:
+    with listing.presentation.open("rb") as fh:
+        return fh.read()
 
 
 async def _authorize(update: Update) -> User | None:
