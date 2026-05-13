@@ -139,9 +139,9 @@ async def handle_photo(update: Update, context: CallbackContext) -> None:
             return
 
         if kind == "dewatermark":
-            await status.edit_text("🧹 Удаляю водяной знак через Dewatermark.ai…")
+            await status.edit_text("🧹 Удаляю водяной знак…")
             cleaned = await clean_image_dewatermark(image_bytes)
-            caption = "Готово ✅\nРежим: Dewatermark.ai (auto)"
+            caption = "Готово ✅\nРежим: auto"
 
         elif kind == "mask":
             await status.edit_text(
