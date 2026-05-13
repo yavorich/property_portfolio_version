@@ -9,20 +9,21 @@ from .base import ParsedListing
 
 logger = logging.getLogger(__name__)
 
-# Bayut listing URLs look like:
+# Bayut listing URLs:
 #   https://www.bayut.com/property/details-13898698.html
 #   https://www.bayut.com/ru/property/details-13898698.html
-#   https://www.bayut.com/en-ae/property/details-13898698.html
+# The number after `/details-` is the property's externalID — the same
+# value the API accepts as `?id=...`.
 PROPERTY_ID_RE = re.compile(r"/details-(\d+)", re.IGNORECASE)
 
 SQFT_TO_SQM = 0.092903
 
 
 class BayutParser:
-    """Bayut listing parser backed by the RapidAPI ``uae-real-estate2`` service.
+    """Bayut listing parser backed by the RapidAPI ``b_yut-data-api`` service.
 
-    Endpoint: ``GET /property/{property_id}`` on the configured base URL,
-    with ``X-RapidAPI-Key`` and ``X-RapidAPI-Host`` headers.
+    Endpoint: ``GET /property-details?id={external_id}`` with
+    ``X-RapidAPI-Key`` and ``X-RapidAPI-Host`` headers.
     """
 
     SOURCE = "bayut"
@@ -36,14 +37,14 @@ class BayutParser:
             raise RuntimeError("BAYUT_API_KEY is not configured")
 
         property_id = self._extract_property_id(url)
-        api_url = f"{settings.BAYUT_API_BASE_URL.rstrip('/')}/property/{property_id}"
+        api_url = f"{settings.BAYUT_API_BASE_URL.rstrip('/')}/property-details"
         headers = {
             "X-RapidAPI-Key": api_key,
             "X-RapidAPI-Host": settings.BAYUT_API_HOST,
             "Accept": "application/json",
         }
 
-        response = await self.http.get(api_url, headers=headers)
+        response = await self.http.get(api_url, params={"id": property_id}, headers=headers)
         if response.status_code != 200:
             detail = response.text[:500]
             logger.error(
@@ -54,8 +55,8 @@ class BayutParser:
                 f"Bayut API returned {response.status_code}: {detail}"
             )
 
-        data = response.json()
-        return self._to_listing(url, property_id, data)
+        payload = response.json()
+        return self._to_listing(url, property_id, payload)
 
     @staticmethod
     def _extract_property_id(url: str) -> str:
@@ -67,11 +68,17 @@ class BayutParser:
             )
         return match.group(1)
 
-    def _to_listing(self, source_url: str, property_id: str, data: dict) -> ParsedListing:
+    def _to_listing(self, source_url: str, property_id: str, payload: dict) -> ParsedListing:
+        data = payload.get("data") if isinstance(payload, dict) else None
+        if not isinstance(data, dict):
+            raise ValueError(
+                f"Bayut API response missing 'data' object (got keys={list(payload.keys()) if isinstance(payload, dict) else type(payload).__name__})"
+            )
+
         listing = ParsedListing(
             source=self.SOURCE,
-            source_url=_as_str(_dig(data, "meta", "url")) or source_url,
-            raw_data=data,
+            source_url=source_url,
+            raw_data=payload,
         )
 
         listing.title = _as_str(data.get("title"))
@@ -82,51 +89,43 @@ class BayutParser:
             listing.price = int(price)
         listing.currency = "AED"
 
-        area = data.get("area") or {}
-        if isinstance(area, dict):
-            built_up = area.get("built_up")
-            unit = (area.get("unit") or "").lower()
-            if isinstance(built_up, (int, float)):
-                if unit == "sqft":
-                    listing.area_sqft = float(built_up)
-                    listing.area_sqm = round(float(built_up) * SQFT_TO_SQM, 2)
-                elif unit in ("sqm", "m2", "m²"):
-                    listing.area_sqm = float(built_up)
-                    listing.area_sqft = round(float(built_up) / SQFT_TO_SQM, 2)
-                else:
-                    listing.area_sqft = float(built_up)
-                    listing.area_sqm = round(float(built_up) * SQFT_TO_SQM, 2)
+        area = data.get("area")
+        if isinstance(area, (int, float)) and area > 0:
+            listing.area_sqft = float(area)
+            listing.area_sqm = round(float(area) * SQFT_TO_SQM, 2)
 
-        details = data.get("details") or {}
-        if isinstance(details, dict):
-            if isinstance(details.get("bedrooms"), int):
-                listing.rooms = details["bedrooms"]
-            if isinstance(details.get("bathrooms"), int):
-                listing.bathrooms = details["bathrooms"]
+        rooms = data.get("rooms")
+        if isinstance(rooms, int) and rooms > 0:
+            listing.rooms = rooms
 
-        listing.address = _format_address(data.get("location") or {})
+        baths = data.get("baths")
+        if isinstance(baths, int) and baths > 0:
+            listing.bathrooms = baths
 
-        agency = data.get("agency") or {}
+        listing.address = _format_address(data.get("location"))
+
+        agency = data.get("agency")
         if isinstance(agency, dict):
             listing.broker_agency = _as_str(agency.get("name"))
 
-        agent = data.get("agent") or {}
-        if isinstance(agent, dict):
-            listing.broker_name = _as_str(agent.get("name"))
-            contact = agent.get("contact") or {}
-            if isinstance(contact, dict):
-                listing.broker_phone = _as_str(
-                    contact.get("mobile")
-                    or contact.get("phone")
-                    or contact.get("whatsapp")
-                )
+        listing.broker_name = _as_str(data.get("contactName"))
 
-        listing.photo_urls = _collect_photo_urls(data, property_id)
+        phone = data.get("phoneNumber")
+        if isinstance(phone, dict):
+            listing.broker_phone = _as_str(
+                phone.get("mobile") or phone.get("phone") or phone.get("whatsapp")
+            )
+        elif isinstance(phone, str):
+            listing.broker_phone = phone.strip()
+
+        listing.photo_urls = _collect_photo_urls(data)
 
         logger.info(
-            "Bayut API parsed id=%s title=%r address=%r price=%s photos=%d",
-            property_id, listing.title[:60], listing.address[:60],
-            listing.price, len(listing.photo_urls),
+            "Bayut API parsed id=%s title=%r address=%r price=%s rooms=%s baths=%s area_sqm=%s photos=%d",
+            property_id,
+            listing.title[:60], listing.address[:60],
+            listing.price, listing.rooms, listing.bathrooms, listing.area_sqm,
+            len(listing.photo_urls),
         )
         return listing
 
@@ -137,47 +136,57 @@ def _as_str(value: Any) -> str:
     return str(value).strip()
 
 
-def _dig(obj: Any, *keys: str) -> Any:
-    for key in keys:
-        if isinstance(obj, dict):
-            obj = obj.get(key)
-        else:
-            return None
-    return obj
+def _format_address(location: Any) -> str:
+    """Build address from the location hierarchy, most-specific first.
+
+    location = [
+        {"level": 0, "name": "UAE"},
+        {"level": 1, "name": "Dubai"},
+        {"level": 2, "name": "Palm Jumeirah"},
+        {"level": 3, "name": "The Crescent"},
+    ]
+    → "The Crescent, Palm Jumeirah, Dubai, UAE"
+    """
+    if not isinstance(location, list):
+        return ""
+
+    items = [
+        loc for loc in location
+        if isinstance(loc, dict) and loc.get("name")
+    ]
+    # Deepest level first; if level missing, treat as last.
+    items.sort(key=lambda loc: loc.get("level", 999), reverse=True)
+
+    seen: set[str] = set()
+    parts: list[str] = []
+    for loc in items:
+        name = _as_str(loc.get("name"))
+        if name and name not in seen:
+            seen.add(name)
+            parts.append(name)
+    return ", ".join(parts)
 
 
-def _collect_photo_urls(data: dict, property_id: str) -> list[str]:
-    media = data.get("media")
-    if not isinstance(media, dict):
-        logger.warning("Bayut id=%s: no media in response", property_id)
-        return []
-
+def _collect_photo_urls(data: dict) -> list[str]:
     urls: list[str] = []
-    photos = media.get("photos")
+
+    photos = data.get("photos")
     if isinstance(photos, list):
-        for item in photos:
-            url = _resolve_bayut_photo(item)
-            if url:
-                urls.append(url)
-
-    if not urls:
-        if cover := media.get("cover_photo"):
-            url = _resolve_bayut_photo(cover)
-            if url:
-                urls.append(url)
-
-    if not urls:
-        # Help diagnose new/changed response shape — dump media on miss
-        first_photo = photos[0] if isinstance(photos, list) and photos else None
-        logger.warning(
-            "Bayut id=%s: no photo URLs extracted. media keys=%s, "
-            "photo_count=%s, cover=%r, photos[0]=%r",
-            property_id,
-            list(media.keys()),
-            media.get("photo_count"),
-            media.get("cover_photo"),
-            first_photo,
+        items = sorted(
+            [p for p in photos if isinstance(p, dict)],
+            key=lambda p: p.get("orderIndex", 999),
         )
+        for p in items:
+            url = p.get("url")
+            if isinstance(url, str) and url.startswith(("http://", "https://")):
+                urls.append(url)
+
+    if not urls:
+        cover = data.get("coverPhoto")
+        if isinstance(cover, dict):
+            url = cover.get("url")
+            if isinstance(url, str) and url.startswith(("http://", "https://")):
+                urls.append(url)
 
     # De-dup, preserve order
     seen: set[str] = set()
@@ -187,51 +196,3 @@ def _collect_photo_urls(data: dict, property_id: str) -> list[str]:
             seen.add(url)
             deduped.append(url)
     return deduped
-
-
-def _resolve_bayut_photo(item: Any) -> str | None:
-    """Bayut photos may arrive as integer IDs, digit strings, ready URLs or dicts."""
-    if item is None:
-        return None
-    if isinstance(item, int):
-        return _photo_url_from_id(item)
-    if isinstance(item, str):
-        s = item.strip()
-        if not s:
-            return None
-        if s.startswith("http://") or s.startswith("https://"):
-            return s
-        if s.isdigit():
-            return _photo_url_from_id(s)
-        return None
-    if isinstance(item, dict):
-        for key in ("url", "full", "large", "original", "main", "src", "photo", "link", "path"):
-            v = item.get(key)
-            if isinstance(v, str) and (v.startswith("http://") or v.startswith("https://")):
-                return v
-        for key in ("id", "photo_id", "key"):
-            v = item.get(key)
-            if isinstance(v, (int, str)) and str(v).strip():
-                return _photo_url_from_id(v)
-    return None
-
-
-def _photo_url_from_id(photo_id: Any) -> str:
-    from django.conf import settings as _s
-    template = getattr(
-        _s,
-        "BAYUT_PHOTO_URL_TEMPLATE",
-        "https://images.bayut.com/thumbnails/{id}-800x600.jpeg",
-    )
-    return template.format(id=str(photo_id).strip())
-
-
-def _format_address(location: dict) -> str:
-    if not isinstance(location, dict):
-        return ""
-    parts: list[str] = []
-    for key in ("cluster", "sub_community", "community", "city", "country"):
-        node = location.get(key)
-        if isinstance(node, dict) and node.get("name"):
-            parts.append(_as_str(node["name"]))
-    return ", ".join(dict.fromkeys(p for p in parts if p))  # de-dup, preserve order
