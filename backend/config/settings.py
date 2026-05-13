@@ -221,6 +221,10 @@ BAYUT_API_HOST = environ.get("BAYUT_API_HOST", "b_yut-data-api.p.rapidapi.com")
 BAYUT_API_BASE_URL = environ.get(
     "BAYUT_API_BASE_URL", "https://b_yut-data-api.p.rapidapi.com"
 )
+BAYUT_PHOTO_URL_TEMPLATE = environ.get(
+    "BAYUT_PHOTO_URL_TEMPLATE",
+    "https://images.bayut.com/thumbnails/{id}-800x600.jpeg",
+)
 
 PROPERTYFINDER_API_KEY = environ.get("PROPERTYFINDER_API_KEY", "")
 PROPERTYFINDER_API_HOST = environ.get(

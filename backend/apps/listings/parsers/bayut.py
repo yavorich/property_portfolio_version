@@ -177,16 +177,15 @@ def _collect_photo_urls(data: dict) -> list[str]:
             key=lambda p: p.get("orderIndex", 999),
         )
         for p in items:
-            url = p.get("url")
-            if isinstance(url, str) and url.startswith(("http://", "https://")):
+            url = _resolve_photo_url(p)
+            if url:
                 urls.append(url)
 
     if not urls:
         cover = data.get("coverPhoto")
-        if isinstance(cover, dict):
-            url = cover.get("url")
-            if isinstance(url, str) and url.startswith(("http://", "https://")):
-                urls.append(url)
+        url = _resolve_photo_url(cover)
+        if url:
+            urls.append(url)
 
     # De-dup, preserve order
     seen: set[str] = set()
@@ -196,3 +195,27 @@ def _collect_photo_urls(data: dict) -> list[str]:
             seen.add(url)
             deduped.append(url)
     return deduped
+
+
+def _resolve_photo_url(photo: Any) -> str | None:
+    """Some listings return ready ``url``, others only ``id`` + ``externalID``.
+
+    For id-only photos we build a thumbnail URL by template:
+    https://images.bayut.com/thumbnails/{id}-800x600.jpeg
+    """
+    if not isinstance(photo, dict):
+        return None
+
+    url = photo.get("url")
+    if isinstance(url, str) and url.startswith(("http://", "https://")):
+        return url
+
+    photo_id = photo.get("id") or photo.get("externalID")
+    if photo_id is None:
+        return None
+    template = getattr(
+        settings,
+        "BAYUT_PHOTO_URL_TEMPLATE",
+        "https://images.bayut.com/thumbnails/{id}-800x600.jpeg",
+    )
+    return template.format(id=str(photo_id).strip())
