@@ -4,64 +4,98 @@
 <meta charset="utf-8">
 <title>{{ listing.title }}</title>
 <style>
-  @page { size: A4; margin: 22mm 18mm; }
-  body { font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; color: #2c3144; font-size: 10.5pt; line-height: 1.55; margin: 0; }
-  a { color: #1c2645; text-decoration: none; }
-
-  /* Cover — small top header */
-  .cover-head-title { font-size: 11.5pt; font-weight: 600; margin: 0; }
-  .cover-head-price { font-size: 14pt; margin: 4pt 0 2pt; color: #1c2645; }
-  .cover-head-addr { font-size: 9.5pt; color: #4b4f63; margin: 0 0 2pt; }
-  .cover-head-specs { font-size: 9.5pt; color: #707283; margin: 0 0 14pt; }
+  @page { size: A4; margin: 12mm; }
+  body {
+    font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+    color: #2c3144;
+    font-size: 10.5pt;
+    line-height: 1.5;
+    margin: 0;
+  }
 
   /* Hero & thumbs */
-  .hero-wrap { width: 100%; margin: 0 0 6pt; }
+  .hero-wrap { width: 100%; margin: 0 0 6pt; overflow: hidden; border-radius: 8pt; }
   .hero { width: 100%; height: 95mm; object-fit: cover; display: block; }
-  .thumbs { width: 100%; border-collapse: separate; border-spacing: 4pt 0; }
+  .thumbs { width: 100%; border-collapse: separate; border-spacing: 5pt 0; }
   .thumbs td { width: 33.33%; padding: 0; vertical-align: top; }
-  .thumbs img { width: 100%; height: 33mm; object-fit: cover; display: block; }
+  .thumb-wrap { overflow: hidden; border-radius: 8pt; }
+  .thumbs img { width: 100%; height: 34mm; object-fit: cover; display: block; }
   .thumbs td:first-child { padding-left: 0; }
   .thumbs td:last-child { padding-right: 0; }
 
-  /* Cover — centered title block */
-  .cover-mid { margin-top: 14mm; text-align: center; }
-  .cover-mid-title { font-family: Georgia, 'Times New Roman', serif; font-weight: normal; font-size: 22pt; color: #1c2645; margin: 0 0 6pt; }
-  .cover-mid-price { font-size: 19pt; font-weight: bold; color: #1c2645; margin: 10pt 0; }
-  .cover-mid-addr { font-size: 10.5pt; color: #2c3144; margin: 8pt 0; }
-  .cover-mid-specs { font-size: 10.5pt; color: #555; margin-top: 6pt; }
-  hr.line { border: 0; border-top: 1px solid #d3d6e0; width: 62%; margin: 5pt auto; }
-
-  .break { page-break-before: always; }
+  /* Centered title block — серифный заголовок и цена в одном стиле */
+  .cover-mid { margin: 9mm 0 6mm; text-align: center; }
+  .cover-mid-title {
+    font-family: Georgia, 'Times New Roman', serif;
+    font-weight: normal;
+    font-size: 24pt;
+    color: #1c2645;
+    line-height: 1.2;
+    margin: 0 0 6pt;
+  }
+  .cover-mid-price {
+    font-family: Georgia, 'Times New Roman', serif;
+    font-weight: bold;
+    font-size: 20pt;
+    color: #1c2645;
+    margin: 10pt 0;
+  }
+  .cover-mid-addr {
+    font-size: 11pt;
+    color: #1c2645;
+    margin: 10pt 0;
+  }
+  .cover-mid-addr b { font-weight: 700; }
+  .cover-mid-specs {
+    font-size: 10.5pt;
+    color: #4a4f63;
+    margin-top: 8pt;
+  }
+  hr.line {
+    border: 0;
+    border-top: 1px solid #d3d6e0;
+    width: 65%;
+    margin: 8pt auto;
+  }
 
   /* About + Features */
-  .about-table { width: 100%; border-collapse: separate; border-spacing: 6pt 0; }
-  .about-table td { vertical-align: top; padding: 14pt 16pt; background: #f3f4f8; width: 50%; }
-  .col-h { color: #1c2645; font-weight: bold; font-size: 12pt; border-bottom: 1px solid #d0d3dd; padding-bottom: 5pt; margin: 0 0 8pt; }
-  .col-body { font-size: 10pt; color: #353a4f; }
-  .col-body p { margin: 0 0 6pt; }
-  .feature-list { list-style: none; padding: 0; margin: 0; }
-  .feature-list li { padding-left: 0; margin-bottom: 4pt; }
-  .feature-list li::before { content: "• "; color: #1c2645; }
-  .empty { color: #888; }
-
-  /* Footer meta on page 2 */
-  .meta-footer {
-    text-align: center;
-    font-size: 8.5pt;
-    color: #8a8d9d;
-    margin-top: 12pt;
-    word-break: break-all;
+  .about-table {
+    width: 100%;
+    border-collapse: separate;
+    border-spacing: 7pt 0;
+    margin-top: 6mm;
   }
-  .meta-footer a { color: #8a8d9d; }
+  .about-table td {
+    vertical-align: top;
+    padding: 14pt 18pt 18pt;
+    background: #f3f4f8;
+    width: 50%;
+  }
+  .col-h {
+    color: #1c2645;
+    font-weight: 700;
+    font-size: 11pt;
+    border-bottom: 1px solid #d0d3dd;
+    padding-bottom: 6pt;
+    margin: 0 0 10pt;
+  }
+  .col-body {
+    font-size: 10pt;
+    color: #353a4f;
+    line-height: 1.55;
+  }
+  .col-body p { margin: 0 0 8pt; }
+  .feature-list { list-style: none; padding: 0; margin: 0; }
+  .feature-list li {
+    padding-left: 0;
+    margin-bottom: 5pt;
+    color: #353a4f;
+  }
+  .feature-list li::before { content: "•  "; color: #1c2645; }
+  .empty { color: #888; }
 </style>
 </head>
 <body>
-
-  {# ── Page 1: Cover ─────────────────────────────────────── #}
-  <div class="cover-head-title">{{ listing.title }}</div>
-  {% if price_formatted %}<div class="cover-head-price">{{ price_formatted }}</div>{% endif %}
-  {% if listing.address %}<div class="cover-head-addr">{{ listing.address }}</div>{% endif %}
-  {% if specs_line %}<div class="cover-head-specs">{{ specs_line }}</div>{% endif %}
 
   {% if hero_url %}
     <div class="hero-wrap"><img class="hero" src="{{ hero_url }}"></div>
@@ -69,7 +103,7 @@
 
   {% if thumb_urls %}
     <table class="thumbs"><tr>
-      {% for url in thumb_urls %}<td><img src="{{ url }}"></td>{% endfor %}
+      {% for url in thumb_urls %}<td><div class="thumb-wrap"><img src="{{ url }}"></div></td>{% endfor %}
       {% for _ in placeholder_thumbs %}<td></td>{% endfor %}
     </tr></table>
   {% endif %}
@@ -86,8 +120,6 @@
     {% if specs_line %}<div class="cover-mid-specs">{{ specs_line }}</div>{% endif %}
   </div>
 
-  {# ── Page 2: About + Features + meta footer ─────────────── #}
-  <div class="break"></div>
   <table class="about-table"><tr>
     <td>
       <div class="col-h">About this property</div>
@@ -106,10 +138,6 @@
       </div>
     </td>
   </tr></table>
-
-  <div class="meta-footer">
-    {% if listing.reference_code %}Ref: {{ listing.reference_code }} • {% endif %}<a href="{{ listing.source_url }}">{{ listing.source_url }}</a>
-  </div>
 
 </body>
 </html>
