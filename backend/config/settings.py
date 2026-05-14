@@ -218,6 +218,9 @@ TELEGRAM_PROXY_FILE = environ.get("TELEGRAM_PROXY_FILE")
 
 STABILITY_API_KEY = environ.get("STABILITY_API_KEY", "")
 DEWATERMARK_API_KEY = environ.get("DEWATERMARK_API_KEY", "")
+
+ANTHROPIC_API_KEY = environ.get("ANTHROPIC_API_KEY", "")
+ANTHROPIC_MODEL = environ.get("ANTHROPIC_MODEL", "claude-haiku-4-5")
 DEWATERMARK_API_URL = environ.get(
     "DEWATERMARK_API_URL",
     "https://platform.dewatermark.ai/api/object_removal/v2/erase_watermark",
