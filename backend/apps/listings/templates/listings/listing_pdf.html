@@ -24,13 +24,13 @@
 
   /* Hero & thumbs — одинаковая ширина: hero == sum(thumbs) + промежутки */
   .hero-wrap { width: 100%; margin: 0 0 5pt; overflow: hidden; border-radius: 6pt; }
-  .hero { width: 100%; height: 115mm; object-fit: cover; display: block; }
+  .hero { width: 100%; height: 140mm; object-fit: cover; display: block; }
   .thumbs { width: 100%; border-collapse: collapse; table-layout: fixed; }
   .thumbs td { width: 33.33%; vertical-align: top; padding: 0 2.5pt; }
   .thumbs td:first-child { padding-left: 0; }
   .thumbs td:last-child { padding-right: 0; }
   .thumb-wrap { overflow: hidden; border-radius: 6pt; }
-  .thumbs img { width: 100%; height: 40mm; object-fit: cover; display: block; }
+  .thumbs img { width: 100%; height: 48mm; object-fit: cover; display: block; }
 
   /* Centered title block */
   .cover-mid { padding: 7mm 0 5mm; text-align: center; }
@@ -105,11 +105,10 @@
   .feature-list li::before { content: "•  "; color: #1c2645; }
   .empty { color: #888; }
 
-  /* Source / Listing ID / Date footer */
+  /* Source / Listing ID / Date footer — на отдельной странице */
   .source-section {
-    margin-top: 12mm;
-    padding: 8mm 0 6mm;
-    border-top: 1px solid #e3e5ed;
+    page-break-before: always;
+    padding-top: 8mm;
     text-align: center;
   }
   .source-title {
@@ -216,7 +215,7 @@
       </td>
       <td>
         <div class="source-meta-label">DATE</div>
-        <div class="source-meta-value">{{ listing.created_at|date:"j N Y" }}</div>
+        <div class="source-meta-value">{{ listing_date }}</div>
       </td>
     </tr></table>
   </div>

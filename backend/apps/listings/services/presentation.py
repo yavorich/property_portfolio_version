@@ -55,6 +55,7 @@ def _generate_sync(listing: Listing) -> Path | None:
         "specs_line": _format_specs(listing),
         "address_parts": address_parts,
         "listing_id_external": _external_listing_id(listing.source_url),
+        "listing_date": _format_date_en(listing.created_at),
     }
 
     html = render_to_string("listings/listing_pdf.html", context)
@@ -74,6 +75,19 @@ def _generate_sync(listing: Listing) -> Path | None:
             tmp_path.unlink(missing_ok=True)
         except OSError:
             pass
+
+
+_MONTHS_EN = [
+    "January", "February", "March", "April", "May", "June",
+    "July", "August", "September", "October", "November", "December",
+]
+
+
+def _format_date_en(dt) -> str:
+    """Format a datetime as ``13 May 2026`` regardless of Django's LANGUAGE_CODE."""
+    if not dt:
+        return ""
+    return f"{dt.day} {_MONTHS_EN[dt.month - 1]} {dt.year}"
 
 
 def _external_listing_id(url: str) -> str:
