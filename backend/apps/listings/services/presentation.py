@@ -1,7 +1,9 @@
 import asyncio
 import logging
+import re
 import tempfile
 from pathlib import Path
+from urllib.parse import urlparse
 
 import pdfkit
 from django.core.files import File
@@ -17,10 +19,10 @@ PDFKIT_OPTIONS = {
     "enable-local-file-access": "",
     "page-size": "A4",
     "encoding": "UTF-8",
-    "margin-top": "12mm",
-    "margin-right": "12mm",
-    "margin-bottom": "12mm",
-    "margin-left": "12mm",
+    "margin-top": "6mm",
+    "margin-right": "6mm",
+    "margin-bottom": "6mm",
+    "margin-left": "6mm",
     "quiet": "",
 }
 
@@ -52,6 +54,7 @@ def _generate_sync(listing: Listing) -> Path | None:
         "price_formatted": _format_price(listing),
         "specs_line": _format_specs(listing),
         "address_parts": address_parts,
+        "listing_id_external": _external_listing_id(listing.source_url),
     }
 
     html = render_to_string("listings/listing_pdf.html", context)
@@ -71,6 +74,20 @@ def _generate_sync(listing: Listing) -> Path | None:
             tmp_path.unlink(missing_ok=True)
         except OSError:
             pass
+
+
+def _external_listing_id(url: str) -> str:
+    """Pull the listing's external numeric id from its source URL.
+
+    Both Property Finder and Bayut embed a long numeric id in the path
+    (e.g. ``...-83648529.html``). Grabs the longest run of 6+ digits — that
+    avoids picking up things like ``2br`` or short building codes.
+    """
+    if not url:
+        return ""
+    path = urlparse(url).path
+    digits = re.findall(r"\d{6,}", path)
+    return digits[-1] if digits else ""
 
 
 def _photo_file_url(photo: ListingPhoto) -> str | None:

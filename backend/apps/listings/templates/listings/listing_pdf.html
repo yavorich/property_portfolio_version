@@ -4,84 +4,95 @@
 <meta charset="utf-8">
 <title>{{ listing.title }}</title>
 <style>
-  @page { size: A4; margin: 12mm; }
+  @page { size: A4; margin: 6mm; }
   body {
     font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
-    color: #2c3144;
+    color: #1c2645;
     font-size: 10.5pt;
     line-height: 1.5;
     margin: 0;
   }
 
+  /* Outer card — тонкая рамка с закруглением как на референсе */
+  .page-card {
+    border: 1pt solid #e3e5ed;
+    border-radius: 10pt;
+    padding: 5mm 5mm 0;
+    background: #fff;
+    overflow: hidden;
+  }
+
   /* Hero & thumbs */
-  .hero-wrap { width: 100%; margin: 0 0 6pt; overflow: hidden; border-radius: 8pt; }
-  .hero { width: 100%; height: 95mm; object-fit: cover; display: block; }
+  .hero-wrap { width: 100%; margin: 0 0 5pt; overflow: hidden; border-radius: 6pt; }
+  .hero { width: 100%; height: 92mm; object-fit: cover; display: block; }
   .thumbs { width: 100%; border-collapse: separate; border-spacing: 5pt 0; }
   .thumbs td { width: 33.33%; padding: 0; vertical-align: top; }
-  .thumb-wrap { overflow: hidden; border-radius: 8pt; }
-  .thumbs img { width: 100%; height: 34mm; object-fit: cover; display: block; }
+  .thumb-wrap { overflow: hidden; border-radius: 6pt; }
+  .thumbs img { width: 100%; height: 32mm; object-fit: cover; display: block; }
   .thumbs td:first-child { padding-left: 0; }
   .thumbs td:last-child { padding-right: 0; }
 
-  /* Centered title block — серифный заголовок и цена в одном стиле */
-  .cover-mid { margin: 9mm 0 6mm; text-align: center; }
+  /* Centered title block */
+  .cover-mid { padding: 7mm 0 5mm; text-align: center; }
   .cover-mid-title {
     font-family: Georgia, 'Times New Roman', serif;
-    font-weight: normal;
-    font-size: 24pt;
+    font-weight: 400;
+    font-size: 22pt;
     color: #1c2645;
-    line-height: 1.2;
-    margin: 0 0 6pt;
+    line-height: 1.25;
+    margin: 0 0 4pt;
+    letter-spacing: 0.2pt;
   }
   .cover-mid-price {
     font-family: Georgia, 'Times New Roman', serif;
-    font-weight: bold;
-    font-size: 20pt;
+    font-weight: 700;
+    font-size: 19pt;
     color: #1c2645;
-    margin: 10pt 0;
+    margin: 8pt 0;
   }
   .cover-mid-addr {
-    font-size: 11pt;
+    font-size: 10.5pt;
     color: #1c2645;
-    margin: 10pt 0;
+    margin: 8pt 0;
   }
   .cover-mid-addr b { font-weight: 700; }
   .cover-mid-specs {
     font-size: 10.5pt;
-    color: #4a4f63;
+    color: #1c2645;
     margin-top: 8pt;
   }
   hr.line {
     border: 0;
-    border-top: 1px solid #d3d6e0;
-    width: 65%;
-    margin: 8pt auto;
+    border-top: 1px solid #dbdee6;
+    width: 68%;
+    margin: 6pt auto;
   }
 
   /* About + Features */
   .about-table {
     width: 100%;
     border-collapse: separate;
-    border-spacing: 7pt 0;
-    margin-top: 6mm;
+    border-spacing: 6pt 0;
+    margin: 3mm 0 5mm;
   }
   .about-table td {
     vertical-align: top;
     padding: 14pt 18pt 18pt;
-    background: #f3f4f8;
+    background: #f4f5f8;
     width: 50%;
+    border-radius: 4pt;
   }
   .col-h {
     color: #1c2645;
     font-weight: 700;
     font-size: 11pt;
-    border-bottom: 1px solid #d0d3dd;
+    border-bottom: 1px solid #dbdee6;
     padding-bottom: 6pt;
     margin: 0 0 10pt;
   }
   .col-body {
     font-size: 10pt;
-    color: #353a4f;
+    color: #1c2645;
     line-height: 1.55;
   }
   .col-body p { margin: 0 0 8pt; }
@@ -89,13 +100,65 @@
   .feature-list li {
     padding-left: 0;
     margin-bottom: 5pt;
-    color: #353a4f;
+    color: #1c2645;
   }
   .feature-list li::before { content: "•  "; color: #1c2645; }
   .empty { color: #888; }
+
+  /* Source / Listing ID / Date footer */
+  .source-section {
+    margin-top: 12mm;
+    padding: 8mm 0 6mm;
+    border-top: 1px solid #e3e5ed;
+    text-align: center;
+  }
+  .source-title {
+    font-family: Georgia, 'Times New Roman', serif;
+    font-weight: 400;
+    font-size: 18pt;
+    color: #1c2645;
+    margin: 0 0 4pt;
+  }
+  .source-pub {
+    font-size: 10pt;
+    color: #4a4f63;
+    margin: 6pt 0 10pt;
+  }
+  .source-url {
+    font-size: 10pt;
+    margin: 6pt 0 6pt;
+    word-break: break-all;
+  }
+  .source-url a { color: #1c2645; text-decoration: underline; }
+  .source-meta {
+    width: 100%;
+    margin-top: 12pt;
+    border-top: 1px solid #e3e5ed;
+    border-collapse: collapse;
+  }
+  .source-meta td {
+    width: 50%;
+    text-align: center;
+    padding: 14pt 8pt 0;
+    vertical-align: top;
+  }
+  .source-meta td + td { border-left: 1px solid #e3e5ed; }
+  .source-meta-label {
+    font-size: 8.5pt;
+    color: #8a8d9d;
+    letter-spacing: 1.2pt;
+    margin-bottom: 6pt;
+  }
+  .source-meta-value {
+    font-size: 12pt;
+    font-weight: 700;
+    color: #1c2645;
+  }
 </style>
 </head>
 <body>
+
+<div class="page-card">
 
   {% if hero_url %}
     <div class="hero-wrap"><img class="hero" src="{{ hero_url }}"></div>
@@ -138,6 +201,27 @@
       </div>
     </td>
   </tr></table>
+
+  <div class="source-section">
+    <div class="source-title">Source</div>
+    <hr class="line">
+    <div class="source-pub">This listing is published on {{ listing.get_source_display }}</div>
+    {% if listing.source_url %}
+      <div class="source-url"><a href="{{ listing.source_url }}">{{ listing.source_url }}</a></div>
+    {% endif %}
+    <table class="source-meta"><tr>
+      <td>
+        <div class="source-meta-label">LISTING ID</div>
+        <div class="source-meta-value">{{ listing_id_external|default:listing.reference_code }}</div>
+      </td>
+      <td>
+        <div class="source-meta-label">DATE</div>
+        <div class="source-meta-value">{{ listing.created_at|date:"j N Y" }}</div>
+      </td>
+    </tr></table>
+  </div>
+
+</div>
 
 </body>
 </html>
