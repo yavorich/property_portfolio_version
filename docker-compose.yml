@@ -45,6 +45,7 @@ services:
     restart: always
     volumes:
       - ./backend:/backend
+      - media:/backend/media
     env_file:
       - .env
     networks:
