@@ -44,6 +44,10 @@ class BayutParser:
             "Accept": "application/json",
         }
 
+        logger.info(
+            "Bayut API request: url=%s property_id=%s source_url=%s",
+            api_url, property_id, url,
+        )
         response = await self.http.get(api_url, params={"id": property_id}, headers=headers)
         if response.status_code != 200:
             detail = response.text[:500]
@@ -56,6 +60,21 @@ class BayutParser:
             )
 
         payload = response.json()
+
+        # Diagnostic — surface every area-/size-/unit-related field in the raw
+        # API payload so we can spot when Bayut serves a different unit, splits
+        # area across multiple fields, or uses an unfamiliar key.
+        data_for_log = payload.get("data") if isinstance(payload, dict) else None
+        if isinstance(data_for_log, dict):
+            area_keys = {
+                k: data_for_log.get(k) for k in data_for_log.keys()
+                if any(token in k.lower() for token in ("area", "size", "unit", "sqm", "sqft", "plot"))
+            }
+            logger.info(
+                "Bayut API area-related fields id=%s: %s",
+                property_id, area_keys,
+            )
+
         return self._to_listing(url, property_id, payload)
 
     @staticmethod
@@ -92,9 +111,28 @@ class BayutParser:
         listing.currency = "AED"
 
         area = data.get("area")
+        plot_area = data.get("plotArea")
+        logger.info(
+            "Bayut area raw id=%s: area=%r (type=%s) plotArea=%r "
+            "purpose=%s rentFrequency=%s",
+            property_id, area, type(area).__name__, plot_area,
+            data.get("purpose"), data.get("rentFrequency"),
+        )
         if isinstance(area, (int, float)) and area > 0:
             listing.area_sqft = float(area)
             listing.area_sqm = round(float(area) * SQFT_TO_SQM, 2)
+            logger.info(
+                "Bayut area parsed id=%s: raw=%.4f → sqft=%.2f sqm=%.2f "
+                "(assumed unit: sqft, conversion=%s)",
+                property_id, float(area), listing.area_sqft, listing.area_sqm,
+                SQFT_TO_SQM,
+            )
+        else:
+            logger.warning(
+                "Bayut area missing or invalid id=%s: area=%r — area_sqft/sqm "
+                "will be None",
+                property_id, area,
+            )
 
         rooms = data.get("rooms")
         if isinstance(rooms, int) and rooms > 0:
