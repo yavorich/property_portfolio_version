@@ -24,6 +24,7 @@ class ListingAdmin(UnfoldModelAdmin):
         "user",
         "price",
         "currency",
+        "presentation_link",
         "created_at",
     )
     list_display_links = ("id", "title")
@@ -41,6 +42,8 @@ class ListingAdmin(UnfoldModelAdmin):
         "error",
         "created_at",
         "updated_at",
+        "presentation_link",
+        "presentation_preview",
     )
     fieldsets = (
         (None, {
@@ -60,6 +63,9 @@ class ListingAdmin(UnfoldModelAdmin):
         ("Брокер", {
             "fields": ("broker_name", "broker_phone", "broker_email", "broker_agency"),
         }),
+        ("Презентация", {
+            "fields": ("presentation", "presentation_link", "presentation_preview"),
+        }),
     )
     inlines = [ListingPhotoInline]
     show_full_result_count = False
@@ -69,6 +75,26 @@ class ListingAdmin(UnfoldModelAdmin):
         if not obj.source_url:
             return "-"
         return format_html('<a href="{0}" target="_blank">{0}</a>', obj.source_url)
+
+    @admin.display(description="PDF")
+    def presentation_link(self, obj):
+        if not obj.presentation:
+            return "—"
+        return format_html(
+            '<a href="{0}" target="_blank" rel="noopener">📄 Открыть PDF</a>',
+            obj.presentation.url,
+        )
+
+    @admin.display(description="Превью")
+    def presentation_preview(self, obj):
+        if not obj.presentation:
+            return "—"
+        return format_html(
+            '<iframe src="{0}" '
+            'style="width:100%;height:900px;border:1px solid #d3d6e0;'
+            'border-radius:6px;background:#f3f4f8;"></iframe>',
+            obj.presentation.url,
+        )
 
     def has_add_permission(self, request):
         return False
