@@ -13,7 +13,7 @@ from django.utils import timezone
 from apps.account.models import User
 from apps.listings.models import Listing, ListingPhoto
 from apps.listings.parsers import ParsedListing, get_parser
-from apps.listings.services.ai_description import generate_description
+from apps.listings.services.ai_description import generate_description, generate_features
 from apps.listings.services.presentation import PRESENTATION_PHOTO_COUNT, generate_pdf
 from apps.listings.services.watermark_batch import remove_watermarks
 from telegram_bot.proxies import load_proxies
@@ -53,10 +53,27 @@ async def process_url(url: str, user: User, on_status: StatusCallback) -> Listin
     await remove_watermarks(listing, on_status, limit=PRESENTATION_PHOTO_COUNT)
 
     await on_status("✍️ Готовлю описание объекта…")
-    ai_description = await generate_description(listing)
+    # Обе AI-задачи стартуют из исходного (длинного) описания, поэтому
+    # запускаем их параллельно — иначе вторая ушла бы уже на сокращённом
+    # тексте, и качество features упало бы.
+    description_task = asyncio.create_task(generate_description(listing))
+    features_task = (
+        asyncio.create_task(generate_features(listing)) if not listing.features else None
+    )
+
+    ai_description = await description_task
+    ai_features = await features_task if features_task else []
+
+    update_fields: list[str] = []
     if ai_description:
         listing.description = ai_description
-        await listing.asave(update_fields=["description", "updated_at"])
+        update_fields.append("description")
+    if ai_features and not listing.features:
+        listing.features = ai_features
+        update_fields.append("features")
+    if update_fields:
+        update_fields.append("updated_at")
+        await listing.asave(update_fields=update_fields)
 
     await on_status("📄 Формирую презентацию…")
     await generate_pdf(listing)
