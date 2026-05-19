@@ -16,7 +16,7 @@ logger = logging.getLogger(__name__)
 # value the API accepts as `?id=...`.
 PROPERTY_ID_RE = re.compile(r"/details-(\d+)", re.IGNORECASE)
 
-SQFT_TO_SQM = 0.092903
+SQM_TO_SQFT = 10.7639
 
 
 class BayutParser:
@@ -119,13 +119,14 @@ class BayutParser:
             data.get("purpose"), data.get("rentFrequency"),
         )
         if isinstance(area, (int, float)) and area > 0:
-            listing.area_sqft = float(area)
-            listing.area_sqm = round(float(area) * SQFT_TO_SQM, 2)
+            # Bayut API возвращает площадь в м² (хотя сайт показывает в sqft).
+            listing.area_sqm = round(float(area), 2)
+            listing.area_sqft = round(float(area) * SQM_TO_SQFT, 2)
             logger.info(
-                "Bayut area parsed id=%s: raw=%.4f → sqft=%.2f sqm=%.2f "
-                "(assumed unit: sqft, conversion=%s)",
-                property_id, float(area), listing.area_sqft, listing.area_sqm,
-                SQFT_TO_SQM,
+                "Bayut area parsed id=%s: raw=%.4f m² → sqm=%.2f sqft=%.2f "
+                "(conversion=%s sqft/m²)",
+                property_id, float(area), listing.area_sqm, listing.area_sqft,
+                SQM_TO_SQFT,
             )
         else:
             logger.warning(
