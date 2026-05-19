@@ -47,21 +47,21 @@ STABILITY_KEYWORD_RE = re.compile(r"\bstability\b", re.IGNORECASE)
 PASSES_RE = re.compile(r"\bx([2-5])\b", re.IGNORECASE)
 
 WELCOME_TEXT = (
-    "<b>Добро пожаловать!</b>\n\n"
-    "Пришлите <b>фотографию</b> — бот автоматически удалит водяной знак "
-    "и вернёт очищенное изображение.\n\n"
-    "Также можно прислать ссылку на листинг Bayut — бот соберёт данные "
-    "об объекте и скачает фото (парсинг в разработке).\n\n"
-    "Команды:\n"
-    "• /start — это сообщение\n"
-    "• /help — как пользоваться"
+    "<b>Welcome!</b>\n\n"
+    "Send a <b>Bayut</b> or <b>Property Finder</b> listing link — the bot will "
+    "collect the property details, download the photos, remove the watermark, "
+    "and send you a PDF file ready to share with your client!\n\n"
+    "Please note❗️ The second slide contains a link to the original listing source.\n\n"
+    "Commands:\n"
+    "• /start — this message\n"
+    "• /help — how to use the bot"
 )
 
 HELP_TEXT = (
-    "<b>Удаление водяных знаков</b>\n"
-    "Просто пришлите фотографию — бот вернёт очищенное изображение.\n\n"
-    "<b>Парсинг листингов</b>\n"
-    "Пришлите ссылку вида <code>https://www.bayut.com/property/details-…</code>."
+    "Send a <b>Bayut</b> or <b>Property Finder</b> listing link in the format "
+    "<code>https://www.bayut.com/property/details-…</code>.\n\n"
+    "The bot will collect the property details, download the photos, remove "
+    "the watermark, and send you a PDF file ready to share with your client!"
 )
 
 BLOCKED_TEXT = "Ваш аккаунт заблокирован."
