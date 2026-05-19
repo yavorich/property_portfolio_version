@@ -34,15 +34,15 @@ async def process_url(url: str, user: User, on_status: StatusCallback) -> Listin
     try:
         logger.info("Processing %s via proxy=%s", url, proxy or "direct")
 
-        await on_status("📥 Скачиваю страницу листинга…")
+        await on_status("📥 Downloading listing page…")
         parser = get_parser(url, http)
         parsed = await parser.parse(url)
 
-        await on_status("💾 Сохраняю данные объекта…")
+        await on_status("💾 Saving property data…")
         listing = await _save_listing(user, parsed)
 
         if parsed.photo_urls:
-            await on_status(f"🖼 Скачиваю фото ({len(parsed.photo_urls)} шт.)…")
+            await on_status(f"🖼 Downloading photos ({len(parsed.photo_urls)})…")
             await _download_photos(listing, parsed.photo_urls, http)
     finally:
         await http.aclose()
@@ -52,7 +52,7 @@ async def process_url(url: str, user: User, on_status: StatusCallback) -> Listin
 
     await remove_watermarks(listing, on_status, limit=PRESENTATION_PHOTO_COUNT)
 
-    await on_status("✍️ Готовлю описание объекта…")
+    await on_status("✍️ Generating description…")
     # Обе AI-задачи стартуют из исходного (длинного) описания, поэтому
     # запускаем их параллельно — иначе вторая ушла бы уже на сокращённом
     # тексте, и качество features упало бы.
@@ -75,7 +75,7 @@ async def process_url(url: str, user: User, on_status: StatusCallback) -> Listin
         update_fields.append("updated_at")
         await listing.asave(update_fields=update_fields)
 
-    await on_status("📄 Формирую презентацию…")
+    await on_status("📄 Building presentation…")
     await generate_pdf(listing)
 
     listing.status = Listing.Status.DONE

@@ -64,7 +64,7 @@ HELP_TEXT = (
     "the watermark, and send you a PDF file ready to share with your client!"
 )
 
-BLOCKED_TEXT = "Ваш аккаунт заблокирован."
+BLOCKED_TEXT = "Your account has been blocked."
 
 
 async def start(update: Update, context: CallbackContext) -> None:
@@ -210,18 +210,17 @@ async def handle_message(update: Update, context: CallbackContext) -> None:
     match = URL_RE.search(message.text)
     if not match:
         await message.reply_text(
-            "Пришлите <b>фото</b> для удаления водяного знака, либо ссылку на "
-            "листинг Bayut/Property Finder.",
+            "Send a <b>Bayut</b> or <b>Property Finder</b> listing link.",
             parse_mode=ParseMode.HTML,
         )
         return
 
     url = match.group(0)
     if not _is_supported(url):
-        await message.reply_text("Поддерживаются только ссылки на Bayut и Property Finder.")
+        await message.reply_text("Only Bayut and Property Finder links are supported.")
         return
 
-    status = await message.reply_text("✅ Принято в работу")
+    status = await message.reply_text("✅ Got it, processing…")
 
     async def on_status(text: str) -> None:
         try:
@@ -232,14 +231,14 @@ async def handle_message(update: Update, context: CallbackContext) -> None:
     try:
         listing = await process_url(url, user, on_status)
     except ParserNotFound:
-        await status.edit_text("Поддерживаются только ссылки на Bayut и Property Finder.")
+        await status.edit_text("Only Bayut and Property Finder links are supported.")
         return
     except NotImplementedError as exc:
-        await status.edit_text(str(exc) or "Парсер для этого источника ещё не готов.")
+        await status.edit_text(str(exc) or "This source isn't supported yet.")
         return
     except Exception:
         logger.exception("Pipeline failed for %s", url)
-        await status.edit_text("❌ Ошибка при обработке. Попробуйте позже.")
+        await status.edit_text("❌ Processing failed. Please try again later.")
         return
 
     photo_count = await listing.photos.acount()
@@ -251,7 +250,7 @@ async def handle_message(update: Update, context: CallbackContext) -> None:
             await message.reply_document(
                 document=BytesIO(pdf_bytes),
                 filename=f"{listing.reference_code or listing.uuid}.pdf",
-                caption=listing.title or "Презентация",
+                caption=listing.title or "Presentation",
             )
         except FileNotFoundError:
             logger.warning("Presentation file missing for listing %s", listing.id)
@@ -384,7 +383,7 @@ def _is_supported(url: str) -> bool:
 
 
 def _format_result(listing: Listing, photo_count: int) -> str:
-    lines = ["✅ <b>Готово!</b>", ""]
+    lines = ["✅ <b>Done!</b>", ""]
     if listing.title:
         lines.append(f"<b>{listing.title}</b>")
     if listing.address:
@@ -393,22 +392,24 @@ def _format_result(listing: Listing, photo_count: int) -> str:
         lines.append(f"💰 {listing.price:,} {listing.currency}".replace(",", " "))
     specs = []
     if listing.rooms is not None:
-        specs.append(f"{listing.rooms} комн.")
+        specs.append(f"{listing.rooms} Bed" if listing.rooms == 1 else f"{listing.rooms} Beds")
     if listing.bathrooms is not None:
-        specs.append(f"{listing.bathrooms} с/у")
-    if listing.area_sqm:
+        specs.append(f"{listing.bathrooms} Bath" if listing.bathrooms == 1 else f"{listing.bathrooms} Baths")
+    if listing.area_sqft:
+        specs.append(f"{int(round(listing.area_sqft))} sqft")
+    elif listing.area_sqm:
         specs.append(f"{listing.area_sqm:g} m²")
     if listing.floor:
-        specs.append(f"этаж {listing.floor}")
+        specs.append(f"floor {listing.floor}")
     if specs:
         lines.append(" · ".join(specs))
     if listing.broker_name or listing.broker_phone:
-        broker = listing.broker_name or "брокер"
+        broker = listing.broker_name or "Broker"
         if listing.broker_phone:
             broker += f" · {listing.broker_phone}"
         lines.append(f"👤 {broker}")
     lines.append("")
-    lines.append(f"🖼 Фото скачано: {photo_count}")
+    lines.append(f"🖼 Photos downloaded: {photo_count}")
     return "\n".join(lines)
 
 

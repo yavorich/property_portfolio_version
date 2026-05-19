@@ -37,7 +37,7 @@ async def remove_watermarks(
 
     processed = 0
     for i, photo in enumerate(photos, start=1):
-        await on_status(f"🧹 Удаляю водяной знак ({i}/{total})…")
+        await on_status(f"🧹 Removing watermark ({i}/{total})…")
         try:
             image_bytes = await asyncio.to_thread(_read_original, photo)
             original_size = len(image_bytes)
