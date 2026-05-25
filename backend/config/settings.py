@@ -221,6 +221,9 @@ DEWATERMARK_API_KEY = environ.get("DEWATERMARK_API_KEY", "")
 
 ANTHROPIC_API_KEY = environ.get("ANTHROPIC_API_KEY", "")
 ANTHROPIC_MODEL = environ.get("ANTHROPIC_MODEL", "claude-haiku-4-5")
+
+# Жёсткий лимит на количество успешно сгенерированных презентаций на 1 аккаунт.
+PRESENTATION_LIMIT_PER_USER = int(environ.get("PRESENTATION_LIMIT_PER_USER", "3"))
 DEWATERMARK_API_URL = environ.get(
     "DEWATERMARK_API_URL",
     "https://platform.dewatermark.ai/api/object_removal/v2/erase_watermark",

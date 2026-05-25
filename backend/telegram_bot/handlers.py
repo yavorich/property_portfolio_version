@@ -4,6 +4,7 @@ import re
 from io import BytesIO
 from urllib.parse import urlparse
 
+from django.conf import settings
 from telegram import Update
 from telegram.constants import ParseMode
 from telegram.error import BadRequest
@@ -65,6 +66,7 @@ HELP_TEXT = (
 )
 
 BLOCKED_TEXT = "Your account has been blocked."
+LIMIT_TEXT_TEMPLATE = "Ограничено до {limit} презентаций"
 
 
 async def start(update: Update, context: CallbackContext) -> None:
@@ -219,6 +221,16 @@ async def handle_message(update: Update, context: CallbackContext) -> None:
     if not _is_supported(url):
         await message.reply_text("Only Bayut and Property Finder links are supported.")
         return
+
+    limit = settings.PRESENTATION_LIMIT_PER_USER
+    if limit > 0:
+        used = await Listing.objects.filter(
+            user=user,
+            status=Listing.Status.DONE,
+        ).acount()
+        if used >= limit:
+            await message.reply_text(LIMIT_TEXT_TEMPLATE.format(limit=limit))
+            return
 
     status = await message.reply_text("✅ Got it, processing…")
 
