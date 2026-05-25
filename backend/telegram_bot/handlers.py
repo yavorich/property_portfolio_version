@@ -5,13 +5,13 @@ from io import BytesIO
 from urllib.parse import urlparse
 
 from django.conf import settings
-from telegram import Update
+from telegram import InlineKeyboardButton, InlineKeyboardMarkup, Update
 from telegram.constants import ParseMode
 from telegram.error import BadRequest
 from telegram.ext import CallbackContext, CommandHandler, MessageHandler, filters
 
 from apps.account.models import User
-from apps.listings.models import Listing
+from apps.listings.models import BotSettings, Listing
 from apps.listings.parsers import ParserNotFound
 from apps.listings.services import process_url
 from apps.watermark.services import (
@@ -69,6 +69,18 @@ BLOCKED_TEXT = "Your account has been blocked."
 LIMIT_TEXT_TEMPLATE = "Ограничено до {limit} презентаций"
 
 
+async def _support_keyboard() -> InlineKeyboardMarkup | None:
+    """Build a one-button inline keyboard for the support link, if configured."""
+    bot_settings = await BotSettings.objects.afirst()
+    if bot_settings is None:
+        bot_settings = await asyncio.to_thread(BotSettings.get_solo)
+    url = (bot_settings.support_url or "").strip()
+    if not url:
+        return None
+    label = (bot_settings.support_button_label or "").strip() or "💬 Support"
+    return InlineKeyboardMarkup([[InlineKeyboardButton(label, url=url)]])
+
+
 async def start(update: Update, context: CallbackContext) -> None:
     user = await _authorize(update)
     if user is None:
@@ -76,14 +88,22 @@ async def start(update: Update, context: CallbackContext) -> None:
     if not user.is_active:
         await update.effective_message.reply_text(BLOCKED_TEXT)
         return
-    await update.effective_message.reply_text(WELCOME_TEXT, parse_mode=ParseMode.HTML)
+    await update.effective_message.reply_text(
+        WELCOME_TEXT,
+        parse_mode=ParseMode.HTML,
+        reply_markup=await _support_keyboard(),
+    )
 
 
 async def help_command(update: Update, context: CallbackContext) -> None:
     user = await _authorize(update)
     if user is None or not user.is_active:
         return
-    await update.effective_message.reply_text(HELP_TEXT, parse_mode=ParseMode.HTML)
+    await update.effective_message.reply_text(
+        HELP_TEXT,
+        parse_mode=ParseMode.HTML,
+        reply_markup=await _support_keyboard(),
+    )
 
 
 async def handle_photo(update: Update, context: CallbackContext) -> None:

@@ -1,9 +1,39 @@
 from django.contrib import admin
 from django.utils.html import format_html
+from django_celery_beat.models import (
+    ClockedSchedule,
+    CrontabSchedule,
+    IntervalSchedule,
+    PeriodicTask,
+    SolarSchedule,
+)
 
-from apps.listings.models import Listing, ListingPhoto
+from apps.listings.models import BotSettings, Listing, ListingPhoto
 from core.unfold_admin.admin import UnfoldModelAdmin, UnfoldTabularInline
 from core.unfold_admin.filters import AllValuesFieldListDropdownFilter
+from core.unfold_singleton.admin import UnfoldSingletonModelAdmin
+
+# Скрываем раздел «Периодические задачи» celery-beat из админки.
+for _model in (
+    PeriodicTask,
+    IntervalSchedule,
+    CrontabSchedule,
+    SolarSchedule,
+    ClockedSchedule,
+):
+    try:
+        admin.site.unregister(_model)
+    except admin.sites.NotRegistered:
+        pass
+
+
+@admin.register(BotSettings)
+class BotSettingsAdmin(UnfoldSingletonModelAdmin):
+    fieldsets = (
+        (None, {
+            "fields": ("support_url", "support_button_label"),
+        }),
+    )
 
 
 class ListingPhotoInline(UnfoldTabularInline):

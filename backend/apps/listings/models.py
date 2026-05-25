@@ -1,8 +1,34 @@
 from uuid import uuid4
 
 from django.db import models
+from solo.models import SingletonModel
 
 from apps.account.models import User
+
+
+class BotSettings(SingletonModel):
+    """Глобальные настройки телеграм-бота, редактируемые в админке."""
+
+    support_url = models.URLField(
+        "Ссылка на поддержку",
+        max_length=512,
+        blank=True,
+        help_text="Например, https://t.me/your_support — будет показана кнопкой "
+                  "в /start и /help.",
+    )
+    support_button_label = models.CharField(
+        "Подпись кнопки",
+        max_length=64,
+        blank=True,
+        default="💬 Support",
+    )
+
+    def __str__(self) -> str:
+        return "Настройки бота"
+
+    class Meta:
+        verbose_name = "настройки бота"
+        verbose_name_plural = "Настройки бота"
 
 
 class Listing(models.Model):
