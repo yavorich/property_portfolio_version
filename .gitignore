@@ -1,6 +1,8 @@
 .env
 env/
 
+backend/proxies.txt
+
 postgresql-data/
 elasticsearch-data/
 rabbitmq-data/

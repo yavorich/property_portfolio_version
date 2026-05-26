@@ -1,0 +1,8 @@
+# One proxy URL per line. Blank lines and `#` comments are ignored.
+# The bot tries them in order and uses the first one that passes healthcheck.
+#
+# Supported schemes: socks5://, http://, https://
+# Format: scheme://user:password@host:port
+
+socks5://USER:PASSWORD@proxy1.example.com:1080
+http://USER:PASSWORD@proxy2.example.com:8080
