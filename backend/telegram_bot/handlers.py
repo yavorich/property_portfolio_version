@@ -66,19 +66,44 @@ HELP_TEXT = (
 )
 
 BLOCKED_TEXT = "Your account has been blocked."
-LIMIT_TEXT_TEMPLATE = "Ограничено до {limit} презентаций"
+LIMIT_TEXT_TEMPLATE = (
+    "Your {limit} free runs are used up 🙌\n\n"
+    "You’ve been testing our early version — we’re actively improving it and "
+    "will release the full version soon with no usage limits.\n\n"
+    "Thanks for being an early user 💚\n\n"
+    "If you have any questions or feedback, reach out {here}"
+)
+
+
+async def _get_bot_settings() -> BotSettings:
+    """Fetch the singleton BotSettings row, creating defaults if missing."""
+    bot_settings = await BotSettings.objects.afirst()
+    if bot_settings is None:
+        bot_settings = await asyncio.to_thread(BotSettings.get_solo)
+    return bot_settings
 
 
 async def _support_keyboard() -> InlineKeyboardMarkup | None:
     """Build a one-button inline keyboard for the support link, if configured."""
-    bot_settings = await BotSettings.objects.afirst()
-    if bot_settings is None:
-        bot_settings = await asyncio.to_thread(BotSettings.get_solo)
+    bot_settings = await _get_bot_settings()
     url = (bot_settings.support_url or "").strip()
     if not url:
         return None
     label = (bot_settings.support_button_label or "").strip() or "💬 Support"
     return InlineKeyboardMarkup([[InlineKeyboardButton(label, url=url)]])
+
+
+async def _build_limit_text(limit: int) -> str:
+    """Build the limit-reached message with optional 'here' hyperlink."""
+    from html import escape
+
+    bot_settings = await _get_bot_settings()
+    contact_url = (bot_settings.contact_url or "").strip()
+    if contact_url:
+        here = f'<a href="{escape(contact_url, quote=True)}">here</a>'
+    else:
+        here = "here"
+    return LIMIT_TEXT_TEMPLATE.format(limit=limit, here=here)
 
 
 async def start(update: Update, context: CallbackContext) -> None:
@@ -244,12 +269,19 @@ async def handle_message(update: Update, context: CallbackContext) -> None:
 
     limit = settings.PRESENTATION_LIMIT_PER_USER
     if limit > 0:
-        used = await Listing.objects.filter(
+        listings_qs = Listing.objects.filter(
             user=user,
             status=Listing.Status.DONE,
-        ).acount()
+        )
+        if user.generations_reset_at:
+            listings_qs = listings_qs.filter(created_at__gt=user.generations_reset_at)
+        used = await listings_qs.acount()
         if used >= limit:
-            await message.reply_text(LIMIT_TEXT_TEMPLATE.format(limit=limit))
+            await message.reply_text(
+                await _build_limit_text(limit),
+                parse_mode=ParseMode.HTML,
+                disable_web_page_preview=True,
+            )
             return
 
     status = await message.reply_text("✅ Got it, processing…")

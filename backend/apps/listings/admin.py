@@ -30,8 +30,11 @@ for _model in (
 @admin.register(BotSettings)
 class BotSettingsAdmin(UnfoldSingletonModelAdmin):
     fieldsets = (
-        (None, {
+        ("Кнопка «Support» в меню", {
             "fields": ("support_url", "support_button_label"),
+        }),
+        ("Сообщение про лимит презентаций", {
+            "fields": ("contact_url",),
         }),
     )
 

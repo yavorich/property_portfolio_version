@@ -33,6 +33,13 @@ class User(Model):
 
     is_active = BooleanField("Активность", default=True)
     created_at = DateTimeField("Дата регистрации", auto_now_add=True)
+    generations_reset_at = DateTimeField(
+        "Сброс счётчика генераций",
+        null=True,
+        blank=True,
+        help_text="Если задано, лимит презентаций считается только от листингов, "
+                  "созданных после этой даты.",
+    )
 
     class Meta:
         verbose_name = "пользователя"

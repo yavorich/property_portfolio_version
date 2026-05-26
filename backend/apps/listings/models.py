@@ -22,6 +22,13 @@ class BotSettings(SingletonModel):
         blank=True,
         default="💬 Support",
     )
+    contact_url = models.URLField(
+        "Контактная ссылка",
+        max_length=512,
+        blank=True,
+        help_text="Куда ведёт слово «here» в сообщении про лимит презентаций "
+                  "(например, https://t.me/your_account).",
+    )
 
     def __str__(self) -> str:
         return "Настройки бота"
